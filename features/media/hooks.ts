@@ -49,6 +49,16 @@ export function useMediaList() {
   });
 }
 
+/** Ambil satu media by id (dipakai preview cover di form artikel). */
+export function useMedia(id: string | null | undefined) {
+  return useQuery({
+    queryKey: [...mediaKeys.all, "detail", id],
+    queryFn: () => mediaApi.get(id!),
+    enabled: Boolean(id),
+    staleTime: Infinity,
+  });
+}
+
 export function useUploadMedia() {
   const qc = useQueryClient();
   return useMutation({

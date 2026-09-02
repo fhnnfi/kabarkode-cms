@@ -11,6 +11,26 @@ export interface PresignInput {
 }
 
 /**
+ * Dev adapter: backend men-sign presigned URL dengan endpoint internal
+ * `http://minio:9000` yang tidak terjangkau browser. Rewrite ke proxy
+ * Next.js (app/api/minio-proxy) yang meneruskan PUT dengan Host header
+ * asli agar signature SigV4 valid. Di production rewrite ini dilewati —
+ * begitu backend men-sign dengan URL publik, CMS tidak perlu berubah.
+ */
+function resolveUploadUrl(uploadUrl: string): string {
+  if (typeof window === "undefined") return uploadUrl;
+  try {
+    const u = new URL(uploadUrl);
+    if (u.hostname === "minio" || u.port === "9000") {
+      return `/api/minio-proxy${u.pathname}${u.search}`;
+    }
+  } catch {
+    /* bukan URL absolut — kembalikan apa adanya */
+  }
+  return uploadUrl;
+}
+
+/**
  * Alur upload (requirement §27):
  * 1. POST /media/presign  -> dapat uploadUrl (presigned PUT)
  * 2. PUT binary ke MinIO via uploadUrl (tanpa Authorization header)
@@ -30,7 +50,7 @@ export const mediaApi = {
 
   /** PUT langsung ke storage — axios polos, BUKAN instance API (jangan bawa Bearer token ke MinIO). */
   async putToPresignedUrl(uploadUrl: string, file: File, contentType: string): Promise<void> {
-    await axios.put(uploadUrl, file, {
+    await axios.put(resolveUploadUrl(uploadUrl), file, {
       headers: { "Content-Type": contentType },
       timeout: 120_000,
     });

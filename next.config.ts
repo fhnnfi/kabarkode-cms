@@ -24,6 +24,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    // Dev tanpa menyentuh CORS backend: request browser ke /api/backend/*
+    // diproksikan server-side ke API publik (same-origin, tidak kena CORS).
+    // Di production (deploy Vercel) NEXT_PUBLIC_API_URL diarahkan langsung
+    // ke https://kabarkodeapi.fhanalabs.site dan rewrite ini tidak dipakai.
+    const target = process.env.KABARKODE_API_ORIGIN ?? "https://kabarkodeapi.fhanalabs.site";
+    return [{ source: "/api/backend/:path*", destination: `${target}/:path*` }];
+  },
 };
 
 export default nextConfig;

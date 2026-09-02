@@ -20,8 +20,8 @@ export const articleFormSchema = z
       .or(z.literal("")),
     excerpt: z.string().trim().max(2000, "Maksimal 2000 karakter").optional(),
     content: z.string().min(1, "Konten wajib diisi"),
-    status: articleStatusEnum.default("draft"),
-    article_type: articleTypeEnum.default("news"),
+    status: articleStatusEnum,
+    article_type: articleTypeEnum,
     author_id: z.string().uuid().nullable().optional(),
     category_id: z.string().uuid().nullable().optional(),
     cover_media_id: z.string().uuid().nullable().optional(),
@@ -32,7 +32,7 @@ export const articleFormSchema = z
       .max(2048)
       .optional()
       .or(z.literal("")),
-    tag_ids: z.array(z.string().uuid()).max(50).default([]),
+    tag_ids: z.array(z.string().uuid()).max(50),
   })
   .refine((v) => !(v.source_name && !v.source_url) || (!v.source_url || !!v.source_name), {
     message: "Source URL dan Source Name sebaiknya diisi berpasangan",

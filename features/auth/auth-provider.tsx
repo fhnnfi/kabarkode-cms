@@ -32,6 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const validateSession = useCallback(async () => {
+    // Sengaja await microtask: hindari setState sinkron di dalam effect body.
+    await Promise.resolve();
     if (!getToken()) {
       setStatus("unauthenticated");
       setUser(null);
@@ -49,7 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void validateSession();
+    // Validasi sesi dijalankan sebagai task mikrotask terpisah, bukan setState
+    // sinkron di body effect (aturan react-hooks/set-state-in-effect).
+    void Promise.resolve().then(validateSession);
     // Sinkronkan saat token dibersihkan interceptor 401.
     return onTokenChange(() => {
       if (!getToken()) {

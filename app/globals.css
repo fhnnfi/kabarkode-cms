@@ -1,6 +1,19 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@plugin "@tailwindcss/typography";
+
+/* Gaya konten Tiptap dan preview artikel */
+.tiptap-content {
+  @apply prose prose-slate max-w-none dark:prose-invert
+    prose-pre:bg-neutral-900 prose-pre:text-neutral-100
+    focus:outline-none prose-p:my-3;
+  min-height: 400px;
+}
+.tiptap-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  @apply pointer-events-none float-left h-0 text-muted-foreground;
+}
 
 @custom-variant dark (&:is(.dark *));
 
