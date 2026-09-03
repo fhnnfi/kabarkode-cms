@@ -33,6 +33,11 @@ function addToLocalMediaIndex(id: string): void {
   }
 }
 
+/** Dipakai alur upload custom (dropzone media & cover) agar indeks lokal ikut ter-update. */
+export function recordUploadedMedia(media: { id: string }): void {
+  addToLocalMediaIndex(media.id);
+}
+
 export function useMediaList() {
   return useQuery({
     queryKey: [...mediaKeys.all, "index"],

@@ -38,7 +38,7 @@ import { EmptyState } from "@/components/brand/empty-state";
 import { cn } from "@/lib/utils";
 import { formatBytes, formatDate } from "@/lib/utils/format";
 import { mediaApi } from "@/lib/api/media";
-import { useDeleteMedia, useMediaList } from "@/features/media/hooks";
+import { useDeleteMedia, useMediaList, recordUploadedMedia } from "@/features/media/hooks";
 import { toast } from "sonner";
 import type { Media } from "@/types/models";
 
@@ -103,12 +103,13 @@ export default function MediaPage() {
           setQueue((q) =>
             q.map((x) => (x.id === item.id ? { ...x, progress: 85 } : x)),
           );
-          await mediaApi.register({
+          const registered = await mediaApi.register({
             file_name: file.name,
             object_key: presign.objectKey,
             mime_type: file.type,
             size: file.size,
           });
+          recordUploadedMedia(registered);
           setQueue((q) =>
             q.map((x) => (x.id === item.id ? { ...x, progress: 100, state: "done" } : x)),
           );

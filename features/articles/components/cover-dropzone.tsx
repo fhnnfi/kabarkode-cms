@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { mediaApi } from "@/lib/api/media";
-import { useMedia } from "@/features/media/hooks";
+import { useMedia, recordUploadedMedia } from "@/features/media/hooks";
 
 const MAX_SIZE = 10 * 1024 * 1024; // selaras MAX_MEDIA_SIZE backend (10 MB)
 
@@ -55,6 +55,7 @@ export function CoverDropzone({
           mime_type: file.type,
           size: file.size,
         });
+        recordUploadedMedia(registered);
         setProgress(100);
         onChange(registered.id);
         setPhase("done");
