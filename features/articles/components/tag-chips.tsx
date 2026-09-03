@@ -23,6 +23,8 @@ import { slugify } from "@/lib/utils/slug";
 import { tagsApi } from "@/lib/api/tags";
 import { useTags, taxonomyKeys } from "@/features/taxonomy/hooks";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/features/auth/auth-provider";
+import { can } from "@/lib/auth/permissions";
 
 /**
  * Tags sebagai chips + search-or-create (redesign §32, §33):
@@ -38,6 +40,8 @@ export function TagChips({
 }) {
   const { data: tags } = useTags();
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const mayCreate = can(user?.role, "manage_tags");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
@@ -114,7 +118,8 @@ export function TagChips({
                     );
                   })}
                 </CommandGroup>
-                {search.trim().length >= 2 &&
+                {mayCreate &&
+                  search.trim().length >= 2 &&
                   !(tags ?? []).some(
                     (t) => t.name.toLowerCase() === search.trim().toLowerCase(),
                   ) && (

@@ -24,6 +24,8 @@ import { categoriesApi } from "@/lib/api/categories";
 import { useCategories } from "@/features/taxonomy/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { taxonomyKeys } from "@/features/taxonomy/hooks";
+import { useAuth } from "@/features/auth/auth-provider";
+import { can } from "@/lib/auth/permissions";
 import type { Category } from "@/types/models";
 
 /**
@@ -40,6 +42,8 @@ export function CategoryPicker({
 }) {
   const { data: categories } = useCategories();
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const mayCreate = can(user?.role, "manage_categories");
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -134,15 +138,17 @@ export function CategoryPicker({
                     </CommandItem>
                   ))}
                 </CommandGroup>
-                <CommandGroup heading="+ Buat kategori baru">
-                  <CommandItem
-                    value="__create__"
-                    onSelect={() => setCreating(true)}
-                    className="text-muted-foreground"
-                  >
-                    <Plus /> Create category
-                  </CommandItem>
-                </CommandGroup>
+                {mayCreate && (
+                  <CommandGroup heading="+ Buat kategori baru">
+                    <CommandItem
+                      value="__create__"
+                      onSelect={() => setCreating(true)}
+                      className="text-muted-foreground"
+                    >
+                      <Plus /> Create category
+                    </CommandItem>
+                  </CommandGroup>
+                )}
               </CommandList>
             </Command>
           )}

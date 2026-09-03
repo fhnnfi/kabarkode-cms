@@ -9,7 +9,7 @@ import { ArticleForm } from "@/features/articles/components/article-form";
 
 export default function EditArticlePage() {
   const { id } = useParams<{ id: string }>();
-  const { data, isLoading, isError, refetch } = useArticle(id);
+  const { data, isLoading, refetch } = useArticle(id);
 
   if (isLoading) {
     return (

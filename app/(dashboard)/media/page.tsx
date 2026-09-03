@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { formatBytes, formatDate } from "@/lib/utils/format";
 import { mediaApi } from "@/lib/api/media";
 import { useDeleteMedia, useMediaList, recordUploadedMedia } from "@/features/media/hooks";
+import { useAuth } from "@/features/auth/auth-provider";
 import { toast } from "sonner";
 import type { Media } from "@/types/models";
 
@@ -60,6 +61,8 @@ interface QueueItem {
 export default function MediaPage() {
   const { data: mediaList, isLoading, isError, refetch } = useMediaList();
   const del = useDeleteMedia();
+  const { user } = useAuth();
+  const mayDelete = user?.role === "admin" || user?.role === "editor";
   const [view, setView] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState<Media | null>(null);
@@ -271,9 +274,11 @@ export default function MediaPage() {
                   <p className="truncate text-xs font-medium">{m.file_name}</p>
                   <p className="font-mono text-[10px] text-muted-foreground">{formatBytes(m.size)}</p>
                 </div>
-                <Button variant="ghost" size="icon" className="kk-transition size-7 opacity-0 group-hover/media:opacity-100" aria-label={`Hapus ${m.file_name}`} onClick={() => setDeleting(m)}>
-                  <Trash2 className="size-3.5 text-destructive" />
-                </Button>
+                {mayDelete && (
+                  <Button variant="ghost" size="icon" className="kk-transition size-7 opacity-0 group-hover/media:opacity-100" aria-label={`Hapus ${m.file_name}`} onClick={() => setDeleting(m)}>
+                    <Trash2 className="size-3.5 text-destructive" />
+                  </Button>
+                )}
               </div>
             </li>
           ))}
@@ -304,9 +309,11 @@ export default function MediaPage() {
                   <TableCell className="hidden font-mono text-xs md:table-cell">{m.mime_type}</TableCell>
                   <TableCell className="hidden text-muted-foreground lg:table-cell">{formatDate(m.created_at, "d MMM yyyy HH:mm")}</TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" aria-label={`Hapus ${m.file_name}`} onClick={() => setDeleting(m)}>
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
+                    {mayDelete && (
+                      <Button variant="ghost" size="icon" aria-label={`Hapus ${m.file_name}`} onClick={() => setDeleting(m)}>
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -338,17 +345,19 @@ export default function MediaPage() {
                     {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
                     Copy URL
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="shrink-0 gap-1.5"
-                    onClick={() => {
-                      setDeleting(preview);
-                      setPreview(null);
-                    }}
-                  >
-                    <Trash2 className="size-3.5" /> Delete
-                  </Button>
+                  {mayDelete && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="shrink-0 gap-1.5"
+                      onClick={() => {
+                        setDeleting(preview);
+                        setPreview(null);
+                      }}
+                    >
+                      <Trash2 className="size-3.5" /> Delete
+                    </Button>
+                  )}
                 </div>
               </div>
             </>

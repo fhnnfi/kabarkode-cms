@@ -18,6 +18,16 @@ export const articlesApi = {
     return { items: data, meta: meta! };
   },
 
+  /** Daftar khusus role author: hanya artikel milik sendiri (scoping server-side). */
+  async listMine(query: ArticleListQuery): Promise<ArticleListResult> {
+    const { data, meta } = await apiRequest<Article[]>({
+      method: "GET",
+      url: "/articles/mine",
+      params: query,
+    });
+    return { items: data, meta: meta! };
+  },
+
   get(id: string): Promise<Article> {
     return apiRequest<Article>({ method: "GET", url: `/articles/${id}` }).then((r) => r.data);
   },

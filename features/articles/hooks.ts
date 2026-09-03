@@ -5,6 +5,7 @@ import { articlesApi } from "@/lib/api/articles";
 import type { ArticleListQuery } from "@/types/models";
 import { toast } from "sonner";
 import type { NormalizedApiError } from "@/types/api";
+import { useAuth } from "@/features/auth/auth-provider";
 
 export const articleKeys = {
   all: ["articles"] as const,
@@ -12,27 +13,42 @@ export const articleKeys = {
   detail: (id: string) => ["articles", "detail", id] as const,
 };
 
+/**
+ * Fetcher daftar artikel sesuai role: staff (admin/editor) memakai
+ * /articles/admin/all; role author memakai /articles/mine (scoping
+ * server-side ke profil tertautnya).
+ */
+export function useArticlesFetcher() {
+  const { user } = useAuth();
+  const isAuthor = user?.role === "author";
+  return (query: ArticleListQuery) =>
+    isAuthor ? articlesApi.listMine(query) : articlesApi.listAll(query);
+}
+
 export function useArticles(query: ArticleListQuery) {
+  const fetcher = useArticlesFetcher();
   return useQuery({
     queryKey: articleKeys.list(query),
-    queryFn: () => articlesApi.listAll(query),
+    queryFn: () => fetcher(query),
     placeholderData: (prev) => prev,
   });
 }
 
 export function useArticle(id: string | null) {
+  const { user } = useAuth();
+  const isAuthor = user?.role === "author";
   return useQuery({
     queryKey: articleKeys.detail(id ?? ""),
     queryFn: async () => {
       try {
         return await articlesApi.get(id!);
       } catch (err) {
-        // Gap backend: GET /articles/:id publik dan 404 untuk draft/archived.
-        // Fallback lewat endpoint staff /articles/admin/all (requirement redesign
-        // §81 melarang ubah backend tanpa perlu).
+        // Gap backend lama: GET /articles/:id publik menolak draft. Fallback
+        // lewat list role-aware (admin/all untuk staff, /mine untuk author).
         if ((err as { status?: number })?.status === 404) {
+          const fetcher = isAuthor ? articlesApi.listMine : articlesApi.listAll;
           for (let page = 1; page <= 5; page++) {
-            const res = await articlesApi.listAll({ limit: 100, page });
+            const res = await fetcher({ limit: 100, page });
             const found = res.items.find((a) => a.id === id);
             if (found) return found;
             if (page >= Math.ceil(res.meta.total / 100)) break;

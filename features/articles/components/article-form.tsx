@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Kbd } from "@/components/ui/kbd";
 import {
@@ -30,7 +31,8 @@ import { CoverDropzone } from "@/features/articles/components/cover-dropzone";
 import { articleFormSchema, type ArticleFormValues } from "@/lib/validation/schemas";
 import { slugify } from "@/lib/utils/slug";
 import { useCreateArticle, useUpdateArticle, usePublishArticle, useArchiveArticle, articleKeys } from "@/features/articles/hooks";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { authorsApi } from "@/lib/api/authors";
 import { STATUS_CONFIG, ARTICLE_TYPE_OPTIONS } from "@/features/articles/status-config";
 import { useAuth } from "@/features/auth/auth-provider";
 import { can } from "@/lib/auth/permissions";
@@ -96,6 +98,19 @@ export function ArticleForm({ article }: ArticleFormProps) {
   const title = values.title ?? "";
   const coverId = values.cover_media_id ?? null;
   const slug = values.slug ?? "";
+
+  // Role author: kunci author_id ke profil tertaut mereka (backend memaksa).
+  const myProfile = useQuery({
+    queryKey: ["authors", "me"],
+    queryFn: authorsApi.me,
+    enabled: user?.role === "author",
+    staleTime: Infinity,
+  });
+  useEffect(() => {
+    if (user?.role === "author" && myProfile.data && !isEdit) {
+      form.setValue("author_id", myProfile.data.id);
+    }
+  }, [user, myProfile.data, isEdit, form]);
 
   // Slug otomatis dari judul selama user belum menyentuh field slug (§24).
   useEffect(() => {
@@ -433,13 +448,17 @@ export function ArticleForm({ article }: ArticleFormProps) {
                   onDirty();
                 }}
               />
-              <AuthorPicker
-                value={values.author_id ?? null}
-                onChange={(id) => {
-                  form.setValue("author_id", id);
-                  onDirty();
-                }}
-              />
+              {user?.role === "author" ? (
+                <AuthorSelfBadge name={myProfile.data?.name} />
+              ) : (
+                <AuthorPicker
+                  value={values.author_id ?? null}
+                  onChange={(id) => {
+                    form.setValue("author_id", id);
+                    onDirty();
+                  }}
+                />
+              )}
             </MetaSection>
 
             <MetaSection title="Cover">
@@ -519,13 +538,17 @@ export function ArticleForm({ article }: ArticleFormProps) {
               onDirty();
             }}
           />
-          <AuthorPicker
-            value={values.author_id ?? null}
-            onChange={(id) => {
-              form.setValue("author_id", id);
-              onDirty();
-            }}
-          />
+          {user?.role === "author" ? (
+            <AuthorSelfBadge name={myProfile.data?.name} />
+          ) : (
+            <AuthorPicker
+              value={values.author_id ?? null}
+              onChange={(id) => {
+                form.setValue("author_id", id);
+                onDirty();
+              }}
+            />
+          )}
         </MetaSection>
         <MetaSection title="Cover">
           <CoverDropzone
@@ -611,6 +634,21 @@ export function ArticleForm({ article }: ArticleFormProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/** Role author: penulis terkunci pada dirinya sendiri. */
+function AuthorSelfBadge({ name }: { name?: string }) {
+  return (
+    <div className="space-y-1.5">
+      <Label>Author</Label>
+      <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+        <span className="flex size-6 items-center justify-center rounded-full bg-black text-[9px] font-bold text-white">
+          {(name ?? "?").slice(0, 2).toUpperCase()}
+        </span>
+        <span className="truncate font-medium">{name ?? "Diri sendiri"}</span>
+      </div>
     </div>
   );
 }

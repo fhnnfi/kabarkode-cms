@@ -54,14 +54,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     if (q.length < 2) return;
     const t = setTimeout(() => {
       setSearching(true);
-      articlesApi
-        .listAll({ search: q, limit: 6, page: 1 })
+      const fetcher = user?.role === "author" ? articlesApi.listMine : articlesApi.listAll;
+      fetcher({ search: q, limit: 6, page: 1 })
         .then((r) => setResults(r.items))
         .catch(() => setResults([]))
         .finally(() => setSearching(false));
     }, 250);
     return () => clearTimeout(t);
-  }, [query, open]);
+  }, [query, open, user]);
 
   function go(href: string) {
     onOpenChange(false);

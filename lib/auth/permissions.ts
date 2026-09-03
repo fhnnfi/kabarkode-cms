@@ -39,9 +39,15 @@ const EDITOR: Permission[] = [
   "manage_media",
 ];
 
-// Role 'author' (akun penulis dari halaman Authors): hanya profil —
-// tidak ada izin konten/taxonomy/media di UI. Backend tetap otoritas final.
-const AUTHOR: Permission[] = ["view_dashboard"];
+// Role 'author' (akun penulis dari halaman Authors): menulis & menerbitkan
+// artikel sendiri + upload media. Backend otoritas final (403 tetap mungkin).
+const AUTHOR: Permission[] = [
+  "view_dashboard",
+  "manage_articles",
+  "publish_articles",
+  "archive_articles",
+  "manage_media",
+];
 
 export function can(role: UserRole | undefined | null, permission: Permission): boolean {
   if (!role) return false;

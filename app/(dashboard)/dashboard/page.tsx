@@ -7,20 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/brand/empty-state";
-import { articlesApi } from "@/lib/api/articles";
+import { useArticlesFetcher } from "@/features/articles/hooks";
 import { STATUS_CONFIG } from "@/features/articles/status-config";
 import { useAuth } from "@/features/auth/auth-provider";
 import { can } from "@/lib/auth/permissions";
 import { formatRelative } from "@/lib/utils/format";
+import type { ArticleListQuery } from "@/types/models";
 
 /**
  * Backend belum punya endpoint statistik — dihitung dari meta.total
- * tiap query list (limit=1) agar hemat payload.
+ * tiap query list (limit=1) agar hemat payload. Role author otomatis
+ * memakai /articles/mine lewat fetcher role-aware.
  */
 function useCount(status?: "draft" | "published" | "archived") {
+  const fetcher = useArticlesFetcher();
   return useQuery({
     queryKey: ["stats", status ?? "all"],
-    queryFn: () => articlesApi.listAll({ status, limit: 1 }),
+    queryFn: () => fetcher({ status, limit: 1 } as ArticleListQuery),
     staleTime: 30_000,
   });
 }
@@ -35,13 +38,14 @@ function greeting(): string {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const fetcher = useArticlesFetcher();
   const total = useCount();
   const published = useCount("published");
   const draft = useCount("draft");
 
   const recent = useQuery({
     queryKey: ["dashboard", "recent"],
-    queryFn: () => articlesApi.listAll({ limit: 5 }),
+    queryFn: () => fetcher({ limit: 5 }),
     staleTime: 30_000,
   });
 
