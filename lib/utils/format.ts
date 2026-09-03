@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
 export function formatBytes(bytes: number | string): string {
@@ -13,6 +13,16 @@ export function formatDate(iso: string | null | undefined, pattern = "d MMM yyyy
   if (!iso) return "—";
   try {
     return format(new Date(iso), pattern, { locale: localeId });
+  } catch {
+    return "—";
+  }
+}
+
+/** Waktu relatif ringkas untuk list editorial ("2 jam yang lalu"). */
+export function formatRelative(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: localeId });
   } catch {
     return "—";
   }

@@ -2,133 +2,131 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, FolderTree, Images, Tags, UserPen } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { ArrowUpRight, FileText, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/brand/empty-state";
 import { articlesApi } from "@/lib/api/articles";
-import { categoriesApi } from "@/lib/api/categories";
-import { tagsApi } from "@/lib/api/tags";
-import { authorsApi } from "@/lib/api/authors";
-import { getLocalMediaIndex } from "@/features/media/hooks";
 import { STATUS_CONFIG } from "@/features/articles/status-config";
-import { formatDate } from "@/lib/utils/format";
+import { useAuth } from "@/features/auth/auth-provider";
+import { can } from "@/lib/auth/permissions";
+import { formatRelative } from "@/lib/utils/format";
 
 /**
  * Backend belum punya endpoint statistik — dihitung dari meta.total
  * tiap query list (limit=1) agar hemat payload.
  */
-function useCount(status: "draft" | "published" | "archived") {
+function useCount(status?: "draft" | "published" | "archived") {
   return useQuery({
-    queryKey: ["stats", status],
+    queryKey: ["stats", status ?? "all"],
     queryFn: () => articlesApi.listAll({ status, limit: 1 }),
     staleTime: 30_000,
   });
 }
 
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 11) return "Selamat pagi";
+  if (h < 15) return "Selamat siang";
+  if (h < 19) return "Selamat sore";
+  return "Selamat malam";
+}
+
 export default function DashboardPage() {
-  const total = useQuery({
-    queryKey: ["stats", "all"],
-    queryFn: () => articlesApi.listAll({ limit: 1 }),
-    staleTime: 30_000,
-  });
+  const { user } = useAuth();
+  const total = useCount();
   const published = useCount("published");
   const draft = useCount("draft");
-  const archived = useCount("archived");
-
-  const categories = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
-  const tags = useQuery({ queryKey: ["tags"], queryFn: tagsApi.list });
-  const authors = useQuery({ queryKey: ["authors"], queryFn: authorsApi.list });
 
   const recent = useQuery({
     queryKey: ["dashboard", "recent"],
-    queryFn: () => articlesApi.listAll({ limit: 6 }),
+    queryFn: () => articlesApi.listAll({ limit: 5 }),
     staleTime: 30_000,
   });
 
+  const name = user?.email?.split("@")[0] ?? "Editor";
   const stats = [
-    { label: "Total Artikel", value: total.data?.meta.total, icon: FileText },
-    { label: "Published", value: published.data?.meta.total, icon: FileText },
-    { label: "Draft", value: draft.data?.meta.total, icon: FileText },
-    { label: "Archived", value: archived.data?.meta.total, icon: FileText },
-    { label: "Kategori", value: categories.data?.length, icon: FolderTree },
-    { label: "Tag", value: tags.data?.length, icon: Tags },
-    { label: "Authors", value: authors.data?.length, icon: UserPen },
-    { label: "Media", value: getLocalMediaIndex().length, icon: Images },
+    { label: "Articles", value: total.data?.meta.total },
+    { label: "Published", value: published.data?.meta.total },
+    { label: "Draft", value: draft.data?.meta.total },
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Ringkasan aktivitas redaksi KabarKode.</p>
-        </div>
-        <Button asChild>
-          <Link href="/articles/new">Tulis Artikel</Link>
-        </Button>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-8">
+      {/* Redesign §16: editorial control center, bukan kartu statistik doang. */}
+      <section>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {greeting()}, {name}.
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          Berikut kondisi KabarKode hari ini.
+        </p>
+      </section>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* Ringkasan tipis: angka besar di whitespace, bukan 8 kartu. */}
+      <section className="flex flex-wrap gap-x-12 gap-y-4 border-y border-border py-6">
         {stats.map((s) => (
-          <Card key={s.label} size="sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <s.icon className="size-3.5" />
-                {s.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {s.value === undefined ? (
-                <Skeleton className="h-7 w-12" />
-              ) : (
-                <span className="text-2xl font-semibold tabular-nums">{s.value}</span>
-              )}
-            </CardContent>
-          </Card>
+          <div key={s.label}>
+            {s.value === undefined ? (
+              <Skeleton className="h-9 w-14" />
+            ) : (
+              <span className="text-3xl font-bold tabular-nums tracking-tight">
+                {s.value}
+              </span>
+            )}
+            <p className="mt-0.5 font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
+              {s.label}
+            </p>
+          </div>
         ))}
-      </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Artikel Terbaru</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+      <div className="grid gap-8 lg:grid-cols-[1fr_260px]">
+        {/* Recent Articles */}
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold tracking-tight">Recent Articles</h2>
+            {can(user?.role, "manage_articles") && (
+              <Button variant="ghost" size="sm" asChild className="kk-transition gap-1 text-xs text-muted-foreground">
+                <Link href="/articles">
+                  Lihat semua <ArrowUpRight className="size-3.5" />
+                </Link>
+              </Button>
+            )}
+          </div>
           {recent.isLoading ? (
-            <div className="space-y-2 p-4">
+            <div className="space-y-2">
               {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
+                <Skeleton key={i} className="h-14 w-full rounded-xl" />
               ))}
             </div>
           ) : recent.isError ? (
-            <div className="p-6 text-sm text-destructive">
-              Gagal memuat artikel terbaru.{" "}
-              <button className="underline" onClick={() => recent.refetch()}>
+            <div className="rounded-xl border py-10 text-center text-sm">
+              <p className="text-destructive">Gagal memuat artikel terbaru.</p>
+              <Button variant="outline" className="mt-3" onClick={() => recent.refetch()}>
                 Coba lagi
-              </button>
+              </Button>
             </div>
           ) : recent.data && recent.data.items.length > 0 ? (
-            <ul>
+            <ul className="divide-y divide-border overflow-hidden rounded-xl border bg-card">
               {recent.data.items.map((a) => (
-                <li key={a.id} className="border-b last:border-0">
+                <li key={a.id}>
                   <Link
                     href={`/articles/${a.id}/edit`}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
+                    className="kk-transition group flex items-center gap-3 px-4 py-3 hover:bg-accent/60"
                   >
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{a.title}</span>
-                    <span className="hidden text-xs text-muted-foreground sm:block">
-                      {a.author?.name ?? "—"}
+                    <FileText className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {a.title}
                     </span>
-                    <span className="hidden text-xs text-muted-foreground md:block">
-                      {formatDate(a.updated_at)}
+                    <span className="hidden shrink-0 font-mono text-xs text-muted-foreground sm:block">
+                      {formatRelative(a.updated_at)}
                     </span>
-                    <Badge variant={STATUS_CONFIG[a.status].variant} className={STATUS_CONFIG[a.status].className}>
+                    <Badge
+                      variant={STATUS_CONFIG[a.status].variant}
+                      className={STATUS_CONFIG[a.status].className}
+                    >
                       {STATUS_CONFIG[a.status].label}
                     </Badge>
                   </Link>
@@ -136,15 +134,36 @@ export default function DashboardPage() {
               ))}
             </ul>
           ) : (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              Belum ada artikel.{" "}
-              <Link href="/articles/new" className="text-primary underline">
-                Buat artikel pertama KabarKode.
-              </Link>
-            </div>
+            <EmptyState
+              title="Belum ada cerita."
+              description="Cerita pertamamu dimulai di sini."
+              actionLabel="Tulis Artikel"
+              actionHref="/articles/new"
+            />
           )}
-        </CardContent>
-      </Card>
+        </section>
+
+        {/* Redesign §17: Quick Actions — hanya operasi yang sering dipakai. */}
+        <section>
+          <h2 className="mb-3 text-sm font-semibold tracking-tight">Quick Actions</h2>
+          <div className="space-y-2">
+            {can(user?.role, "manage_articles") && (
+              <Button asChild className="w-full justify-start gap-2 rounded-xl">
+                <Link href="/articles/new">
+                  <Plus /> New Article
+                </Link>
+              </Button>
+            )}
+            {can(user?.role, "manage_media") && (
+              <Button asChild variant="outline" className="w-full justify-start gap-2 rounded-xl bg-card">
+                <Link href="/media">
+                  <Upload /> Upload Media
+                </Link>
+              </Button>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
