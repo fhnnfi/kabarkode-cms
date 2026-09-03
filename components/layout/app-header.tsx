@@ -106,8 +106,10 @@ export function AppHeader() {
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
-              <User /> Profil
+            <DropdownMenuItem asChild>
+              <Link href="/profile">
+                <User /> Profil
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => logout()}>
               <LogOut /> Keluar

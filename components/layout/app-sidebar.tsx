@@ -114,6 +114,14 @@ export function AppSidebar() {
         <SidebarGroup className="py-0">
           <SidebarMenu>
             <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Profil" isActive={pathname.startsWith("/profile")}>
+                <Link href="/profile">
+                  <UserPen />
+                  <span>Profil</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Pengaturan" isActive={pathname.startsWith("/settings")}>
                 <Link href="/settings">
                   <Settings />

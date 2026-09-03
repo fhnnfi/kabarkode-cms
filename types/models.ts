@@ -2,7 +2,7 @@
 
 export type ArticleStatus = "draft" | "published" | "archived";
 export type ArticleType = "news" | "analysis" | "tutorial" | "security" | "release";
-export type UserRole = "admin" | "editor";
+export type UserRole = "admin" | "editor" | "author";
 
 export interface AuthUser {
   id: string;
@@ -66,6 +66,8 @@ export interface Author {
   slug: string;
   bio: string | null;
   avatar_media_id: string | null;
+  /** Email akun login tertaut (role author) — null bila belum ada akun. */
+  email?: string | null;
   created_at: string;
   updated_at: string;
 }

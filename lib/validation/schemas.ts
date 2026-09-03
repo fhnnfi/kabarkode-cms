@@ -61,10 +61,17 @@ export const tagFormSchema = z.object({
 });
 export type TagFormValues = z.infer<typeof tagFormSchema>;
 
-export const authorFormSchema = z.object({
-  name: z.string().trim().min(2, "Minimal 2 karakter").max(120),
-  slug: z.string().trim().regex(SLUG_REGEX).max(140).optional().or(z.literal("")),
-  bio: z.string().trim().max(5000).optional().or(z.literal("")),
-  avatar_media_id: z.string().uuid().nullable().optional(),
-});
+export const authorFormSchema = z
+  .object({
+    name: z.string().trim().min(2, "Minimal 2 karakter").max(120),
+    slug: z.string().trim().regex(SLUG_REGEX).max(140).optional().or(z.literal("")),
+    bio: z.string().trim().max(5000).optional().or(z.literal("")),
+    avatar_media_id: z.string().uuid().nullable().optional(),
+    email: z.string().trim().email("Email tidak valid").optional().or(z.literal("")),
+    password: z.string().min(8, "Password minimal 8 karakter").max(128).optional().or(z.literal("")),
+  })
+  .refine((v) => !v.email || v.password, {
+    message: "Password diperlukan saat email diisi",
+    path: ["password"],
+  });
 export type AuthorFormValues = z.infer<typeof authorFormSchema>;

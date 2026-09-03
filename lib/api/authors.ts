@@ -10,14 +10,36 @@ export const authorsApi = {
     slug?: string;
     bio?: string | null;
     avatar_media_id?: string | null;
+    email?: string | null;
+    password?: string | null;
   }): Promise<Author> {
     return apiRequest<Author>({ method: "POST", url: "/authors", data: body }).then((r) => r.data);
   },
   update(
     id: string,
-    body: Partial<{ name: string; slug: string; bio: string | null; avatar_media_id: string | null }>,
+    body: Partial<{
+      name: string;
+      slug: string;
+      bio: string | null;
+      avatar_media_id: string | null;
+      password?: string | null;
+    }>,
   ): Promise<Author> {
     return apiRequest<Author>({ method: "PATCH", url: `/authors/${id}`, data: body }).then(
+      (r) => r.data,
+    );
+  },
+  /** Profil author milik akun yang login (role author). */
+  me(): Promise<Author> {
+    return apiRequest<Author>({ method: "GET", url: "/authors/me" }).then((r) => r.data);
+  },
+  updateMe(body: {
+    name?: string;
+    bio?: string | null;
+    avatar_media_id?: string | null;
+    password?: string | null;
+  }): Promise<Author> {
+    return apiRequest<Author>({ method: "PATCH", url: "/authors/me", data: body }).then(
       (r) => r.data,
     );
   },

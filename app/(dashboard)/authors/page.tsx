@@ -44,7 +44,7 @@ export default function AuthorsPage() {
 
   const form = useForm<AuthorFormValues>({
     resolver: zodResolver(authorFormSchema),
-    defaultValues: { name: "", slug: "", bio: "", avatar_media_id: null },
+    defaultValues: { name: "", slug: "", bio: "", avatar_media_id: null, email: "", password: "" },
   });
 
   const avatarId = form.watch("avatar_media_id");
@@ -52,13 +52,20 @@ export default function AuthorsPage() {
 
   function startCreate() {
     setEditing(null);
-    form.reset({ name: "", slug: "", bio: "", avatar_media_id: null });
+    form.reset({ name: "", slug: "", bio: "", avatar_media_id: null, email: "", password: "" });
     setOpen(true);
   }
 
   function startEdit(a: Author) {
     setEditing(a);
-    form.reset({ name: a.name, slug: a.slug, bio: a.bio ?? "", avatar_media_id: a.avatar_media_id });
+    form.reset({
+      name: a.name,
+      slug: a.slug,
+      bio: a.bio ?? "",
+      avatar_media_id: a.avatar_media_id,
+      email: a.email ?? "",
+      password: "",
+    });
     setOpen(true);
   }
 
@@ -69,6 +76,8 @@ export default function AuthorsPage() {
       bio: values.bio?.trim() || null,
       avatar_media_id: values.avatar_media_id ?? null,
     };
+    if (values.email?.trim()) body.email = values.email.trim();
+    if (values.password) body.password = values.password;
     if (editing) {
       crud.update.mutate({ id: editing.id, body }, { onSuccess: () => setOpen(false) });
     } else {
@@ -178,6 +187,45 @@ export default function AuthorsPage() {
               <Label htmlFor="author-bio">Bio</Label>
               <Textarea id="author-bio" rows={3} {...form.register("bio")} />
             </div>
+            {/* Akun login (role author) — dibuat saat create dengan email+password. */}
+            <div className="grid gap-3 rounded-xl border bg-muted/30 p-3">
+              <p className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+                {editing ? "Akun login" : "Akun sign-in (opsional)"}
+              </p>
+              <div className="grid gap-2">
+                <Label htmlFor="author-email">Email</Label>
+                <Input
+                  id="author-email"
+                  type="email"
+                  placeholder="penulis@example.com"
+                  disabled={Boolean(editing?.user_id)}
+                  aria-invalid={Boolean(form.formState.errors.email)}
+                  {...form.register("email")}
+                />
+                {form.formState.errors.email && (
+                  <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+                )}
+                {editing?.user_id && (
+                  <p className="text-xs text-muted-foreground">
+                    Email tidak bisa diubah. Isi password saja untuk reset.
+                  </p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="author-password">Password</Label>
+                <Input
+                  id="author-password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder={editing?.user_id ? "kosongkan = tidak diganti" : "min. 8 karakter"}
+                  aria-invalid={Boolean(form.formState.errors.password)}
+                  {...form.register("password")}
+                />
+                {form.formState.errors.password && (
+                  <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
+                )}
+              </div>
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Batal</Button>
               <Button type="submit" disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button>
@@ -243,6 +291,18 @@ function AuthorCard({
       <p className="font-mono text-xs text-muted-foreground">@{author.slug}</p>
       <p className="mt-1 text-xs text-muted-foreground">
         {count.data ? `${count.data.meta.total} artikel` : "…"}
+      </p>
+      <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
+        {author.email ? (
+          <span className="kk-transition inline-flex items-center gap-1 rounded-full bg-brand/20 px-2 py-0.5 text-black">
+            <span className="size-1.5 rounded-full bg-brand ring-1 ring-black/10" />
+            {author.email}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5">
+            tanpa akun login
+          </span>
+        )}
       </p>
       <div className="mt-3 flex justify-center gap-1">
         <Button variant="ghost" size="sm" asChild className="kk-transition gap-1 text-xs">
