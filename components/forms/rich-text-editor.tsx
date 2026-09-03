@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -126,7 +126,7 @@ function EditorToolbar({ editor }: { editor: Editor }) {
   }
 
   return (
-    <div className="kk-transition sticky top-0 z-20 flex flex-wrap items-center gap-0.5 border-b bg-card/95 p-1.5 backdrop-blur">
+    <div className="kk-transition flex flex-wrap items-center gap-0.5 border-b bg-card p-1.5">
       <ToolbarButton label="Bold" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
         <Bold />
       </ToolbarButton>
@@ -188,7 +188,18 @@ function EditorToolbar({ editor }: { editor: Editor }) {
  * value/onChange HTML — implementasi Tiptap terisolasi di sini.
  */
 export function RichTextEditor({ value, onChange, onBlur, editable = true }: RichTextEditorProps) {
+  // Ref ke callback terbaru: onUpdate/onBlur dibuat sekali saat editor dibuat,
+  // tanpa ref closure-nya basi dan perubahan tidak tersimpan.
+  const onChangeRef = useRef(onChange);
+  const onBlurRef = useRef(onBlur);
+  onChangeRef.current = onChange;
+  onBlurRef.current = onBlur;
+
   const editor = useEditor({
+    // SSR/Next.js: JANGAN render editor di server — tanpa ini, hidrasi bisa
+    // mismatch dan ProseMirror tidak pernah memasang event handler di browser
+    // (gejala: editor tampil tapi tidak bisa diketik sama sekali).
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({ codeBlock: false }),
       Underline,
@@ -205,17 +216,20 @@ export function RichTextEditor({ value, onChange, onBlur, editable = true }: Ric
           "tiptap-content min-h-[400px] max-w-none px-4 py-3 focus:outline-none text-[15px] leading-relaxed",
       },
     },
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
-    onBlur: () => onBlur?.(),
+    onUpdate: ({ editor }) => onChangeRef.current(editor.getHTML()),
+    onBlur: () => onBlurRef.current?.(),
   });
+
+  // Prop editable berubah setelah mount (mis. saat mutasi busy) — sinkronkan.
+  useEffect(() => {
+    if (editor && editor.isEditable !== editable) {
+      editor.setEditable(editable);
+    }
+  }, [editor, editable]);
 
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
-      {editor && (
-        <div className="sticky top-14 z-10">
-          <EditorToolbar editor={editor} />
-        </div>
-      )}
+      {editor && <EditorToolbar editor={editor} />}
       <EditorContent editor={editor} />
     </div>
   );
