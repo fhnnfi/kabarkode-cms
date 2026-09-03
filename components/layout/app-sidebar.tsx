@@ -122,12 +122,14 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Pengaturan" isActive={pathname.startsWith("/settings")}>
-                <Link href="/settings">
-                  <Settings />
-                  <span>Pengaturan</span>
-                </Link>
-              </SidebarMenuButton>
+              {user?.role !== "author" && (
+                <SidebarMenuButton asChild tooltip="Pengaturan" isActive={pathname.startsWith("/settings")}>
+                  <Link href="/settings">
+                    <Settings />
+                    <span>Pengaturan</span>
+                  </Link>
+                </SidebarMenuButton>
+              )}
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
