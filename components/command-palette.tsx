@@ -51,13 +51,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   useEffect(() => {
     if (!open) return;
     const q = query.trim();
-    if (q.length < 2) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
+    if (q.length < 2) return;
     const t = setTimeout(() => {
+      setSearching(true);
       articlesApi
         .listAll({ search: q, limit: 6, page: 1 })
         .then((r) => setResults(r.items))
@@ -141,7 +137,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               ))}
             </CommandGroup>
 
-            {results.length > 0 && (
+            {query.trim().length >= 2 && results.length > 0 && (
               <>
                 <CommandSeparator />
                 <CommandGroup heading="Articles">

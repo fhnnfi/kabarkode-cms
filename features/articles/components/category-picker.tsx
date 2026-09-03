@@ -19,7 +19,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { slugify } from "@/lib/utils/slug";
 import { categoriesApi } from "@/lib/api/categories";
 import { useCategories } from "@/features/taxonomy/hooks";

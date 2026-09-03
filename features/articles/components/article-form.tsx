@@ -9,9 +9,8 @@ import { Archive, ArrowLeft, Check, Eye, Loader2, Pencil, Send } from "lucide-re
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Kbd } from "@/components/ui/kbd";
 import {
   Dialog,

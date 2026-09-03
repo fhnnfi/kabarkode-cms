@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 import { mediaApi } from "@/lib/api/media";
 import { useMedia } from "@/features/media/hooks";
 
-const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 const MAX_SIZE = 10 * 1024 * 1024; // selaras MAX_MEDIA_SIZE backend (10 MB)
 
 type Phase = "idle" | "uploading" | "done" | "error";
