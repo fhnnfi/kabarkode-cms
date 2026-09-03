@@ -1,6 +1,7 @@
 "use client";
 
-import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { useCallback, useState } from "react";
+import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
@@ -8,6 +9,7 @@ import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
+import { Check, Copy } from "lucide-react";
 import {
   Bold,
   Code,
@@ -29,6 +31,44 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const lowlight = createLowlight(common);
+
+/** Code block dengan header + tombol Copy (redesign §41). */
+function CodeBlockView({ editor, node }: { editor: Editor; node: { textContent: string } }) {
+  const [copied, setCopied] = useState(false);
+  const copy = useCallback(() => {
+    navigator.clipboard.writeText(node.textContent).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [node.textContent]);
+  return (
+    <NodeViewWrapper as="div" className="code-block-view my-3 overflow-hidden rounded-lg">
+      <div className="flex items-center justify-between bg-neutral-800 px-3 py-1.5">
+        <span className="font-mono text-[10px] tracking-widest text-neutral-400 uppercase">
+          Code
+        </span>
+        <button
+          type="button"
+          onClick={copy}
+          disabled={!editor.isEditable}
+          aria-label="Copy code"
+          className="kk-transition flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] text-neutral-300 hover:bg-neutral-700 hover:text-white"
+        >
+          {copied ? <Check className="size-3 text-brand" /> : <Copy className="size-3" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      {/* Tiptap mendeklarasikan `as` sempit (hanya "div"); "pre" valid secara runtime. */}
+      <NodeViewContent as={"pre" as "div"} className="!mt-0 !rounded-none" />
+    </NodeViewWrapper>
+  );
+}
+
+const CodeBlockWithCopy = CodeBlockLowlight.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(CodeBlockView);
+  },
+});
 
 interface RichTextEditorProps {
   value: string;
@@ -86,7 +126,7 @@ function EditorToolbar({ editor }: { editor: Editor }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-1.5">
+    <div className="kk-transition sticky top-0 z-20 flex flex-wrap items-center gap-0.5 border-b bg-card/95 p-1.5 backdrop-blur">
       <ToolbarButton label="Bold" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
         <Bold />
       </ToolbarButton>
@@ -154,7 +194,7 @@ export function RichTextEditor({ value, onChange, onBlur, editable = true }: Ric
       Underline,
       Link.configure({ openOnClick: false, autolink: true }),
       Image.configure({ allowBase64: false }),
-      CodeBlockLowlight.configure({ lowlight }),
+      CodeBlockWithCopy.configure({ lowlight }),
       Placeholder.configure({ placeholder: "Tulis artikel di sini…" }),
     ],
     content: value,
@@ -170,8 +210,12 @@ export function RichTextEditor({ value, onChange, onBlur, editable = true }: Ric
   });
 
   return (
-    <div className="overflow-hidden rounded-lg border">
-      {editor && <EditorToolbar editor={editor} />}
+    <div className="overflow-hidden rounded-lg border bg-card">
+      {editor && (
+        <div className="sticky top-14 z-10">
+          <EditorToolbar editor={editor} />
+        </div>
+      )}
       <EditorContent editor={editor} />
     </div>
   );
