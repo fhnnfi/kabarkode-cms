@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -17,17 +17,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/brand/empty-state";
 import { slugify } from "@/lib/utils/slug";
 import { useTagCrud, useTags } from "@/features/taxonomy/hooks";
 import { tagFormSchema, type TagFormValues } from "@/lib/validation/schemas";
 import type { Tag } from "@/types/models";
 
+/**
+ * Tags (redesign §50): chip compact; klik chip membuka pemakaian artikel
+ * di halaman Articles lewat filter tag di URL.
+ */
 export default function TagsPage() {
   const { data: tags, isLoading, isError, refetch } = useTags();
   const crud = useTagCrud();
   const [editing, setEditing] = useState<Tag | null>(null);
   const [deleting, setDeleting] = useState<Tag | null>(null);
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const form = useForm<TagFormValues>({
     resolver: zodResolver(tagFormSchema),
@@ -56,41 +62,86 @@ export default function TagsPage() {
   }
 
   const busy = crud.create.isPending || crud.update.isPending;
+  const filtered = (tags ?? []).filter(
+    (t) =>
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.slug.includes(search.toLowerCase()),
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-3xl space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Tag</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Tags</h1>
           <p className="text-sm text-muted-foreground">Label bebas untuk artikel.</p>
         </div>
-        <Button onClick={startCreate}><Plus /> Tag Baru</Button>
+        <Button onClick={startCreate}>
+          <Plus /> New Tag
+        </Button>
+      </div>
+
+      <div className="relative max-w-sm">
+        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cari tag…"
+          className="bg-card pl-8"
+          aria-label="Cari tag"
+        />
       </div>
 
       {isLoading ? (
-        <div className="flex flex-wrap gap-2">{[...Array(10)].map((_, i) => <Skeleton key={i} className="h-8 w-24" />)}</div>
-      ) : isError ? (
-        <div className="rounded-lg border py-10 text-center text-sm text-destructive">
-          Gagal memuat tag. <Button variant="link" onClick={() => refetch()}>Coba lagi</Button>
-        </div>
-      ) : tags && tags.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {tags.map((t) => (
-            <div key={t.id} className="flex items-center gap-1 rounded-full border py-1 pr-1 pl-3">
-              <Badge variant="secondary" className="rounded-full">{t.name}</Badge>
-              <Button variant="ghost" size="icon" className="size-6" aria-label={`Edit tag ${t.name}`} onClick={() => startEdit(t)}>
-                <Pencil className="size-3" />
-              </Button>
-              <Button variant="ghost" size="icon" className="size-6" aria-label={`Hapus tag ${t.name}`} onClick={() => setDeleting(t)}>
-                <Trash2 className="size-3 text-destructive" />
-              </Button>
-            </div>
+          {[...Array(10)].map((_, i) => (
+            <Skeleton key={i} className="h-9 w-24 rounded-full" />
           ))}
         </div>
-      ) : (
-        <div className="rounded-lg border py-12 text-center text-sm text-muted-foreground">
-          Belum ada tag. <Button variant="link" onClick={startCreate}>Buat tag pertama</Button>
+      ) : isError ? (
+        <div className="rounded-xl border bg-card py-10 text-center text-sm text-destructive">
+          Gagal memuat tag.{" "}
+          <Button variant="link" onClick={() => refetch()}>
+            Coba lagi
+          </Button>
         </div>
+      ) : filtered.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {filtered.map((t) => (
+            <span
+              key={t.id}
+              className="kk-transition group/tag flex items-center overflow-hidden rounded-full border bg-card py-1 pl-0 hover:border-foreground/30 hover:shadow-sm"
+            >
+              {/* Klik nama tag → lihat pemakaian artikel (§50) */}
+              <Link
+                href={`/articles?tag=${t.slug}`}
+                className="kk-transition flex items-center gap-1.5 rounded-full bg-black py-1 pr-2 pl-3 text-sm font-medium text-white hover:bg-neutral-800"
+                aria-label={`Lihat artikel dengan tag ${t.name}`}
+              >
+                {t.name}
+                <span className="font-mono text-[10px] opacity-60">#{t.slug}</span>
+              </Link>
+              <span className="flex items-center gap-0.5 pl-1.5 pr-1.5 opacity-0 transition-opacity group-hover/tag:opacity-100 focus-within:opacity-100">
+                <Button variant="ghost" size="icon" className="size-6" aria-label={`Edit tag ${t.name}`} onClick={() => startEdit(t)}>
+                  <Pencil className="size-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="size-6" aria-label={`Hapus tag ${t.name}`} onClick={() => setDeleting(t)}>
+                  <Trash2 className="size-3 text-destructive" />
+                </Button>
+              </span>
+            </span>
+          ))}
+        </div>
+      ) : tags && tags.length > 0 ? (
+        <div className="rounded-xl border bg-card py-12 text-center text-sm text-muted-foreground">
+          Tidak ada tag yang cocok dengan pencarian.
+        </div>
+      ) : (
+        <EmptyState
+          title="Belum ada tag."
+          description="Tag membantu pembaca menemukan topik yang saling terkait."
+          actionLabel="Buat tag pertama"
+          onAction={startCreate}
+        />
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -106,7 +157,7 @@ export default function TagsPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="tag-slug">Slug</Label>
-              <Input id="tag-slug" placeholder="kosongkan = otomatis" {...form.register("slug")} />
+              <Input id="tag-slug" className="font-mono text-sm" placeholder="kosongkan = otomatis" {...form.register("slug")} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Batal</Button>
@@ -129,7 +180,7 @@ export default function TagsPage() {
               disabled={crud.remove.isPending}
               onClick={() => deleting && crud.remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })}
             >
-              Hapus
+              Hapus tag
             </Button>
           </DialogFooter>
         </DialogContent>

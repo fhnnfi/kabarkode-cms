@@ -27,7 +27,7 @@ import { useArticles } from "@/features/articles/hooks";
 import { ArticleList } from "@/features/articles/components/article-list";
 import { EmptyState } from "@/components/brand/empty-state";
 import { STATUS_OPTIONS, ARTICLE_TYPE_OPTIONS } from "@/features/articles/status-config";
-import { useCategories, useAuthors } from "@/features/taxonomy/hooks";
+import { useCategories, useAuthors, useTags } from "@/features/taxonomy/hooks";
 import { cn } from "@/lib/utils";
 import type { ArticleListQuery } from "@/types/models";
 
@@ -49,6 +49,7 @@ export default function ArticlesPage() {
       article_type: (params.get("type") ?? undefined) as ArticleListQuery["article_type"],
       category: params.get("category") ?? undefined,
       author: params.get("author") ?? undefined,
+      tag: params.get("tag") ?? undefined,
     }),
     [params],
   );
@@ -58,6 +59,7 @@ export default function ArticlesPage() {
   const { data, isLoading, isError, refetch } = useArticles(query);
   const categories = useCategories();
   const authors = useAuthors();
+  const tags = useTags();
 
   const setParam = useCallback(
     (updates: Record<string, string | undefined>) => {
@@ -73,10 +75,11 @@ export default function ArticlesPage() {
   );
 
   const meta = data?.meta;
-  const advancedFilters = Boolean(query.article_type || query.category || query.author);
-  const activeCount = [query.article_type, query.category, query.author].filter(Boolean).length;
+  const advancedFilters = Boolean(query.article_type || query.category || query.author || query.tag);
+  const activeCount = [query.article_type, query.category, query.author, query.tag].filter(Boolean).length;
   const categoryName = categories.data?.find((c) => c.slug === query.category)?.name;
   const authorName = authors.data?.find((a) => a.slug === query.author)?.name;
+  const tagName = tags.data?.find((t) => t.slug === query.tag)?.name;
   const typeName = ARTICLE_TYPE_OPTIONS.find((t) => t.value === query.article_type)?.label;
 
   return (
@@ -169,7 +172,7 @@ export default function ArticlesPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setParam({ article_type: undefined, category: undefined, author: undefined });
+                  setParam({ article_type: undefined, category: undefined, author: undefined, tag: undefined });
                   setFiltersOpen(false);
                 }}
               >
@@ -184,9 +187,9 @@ export default function ArticlesPage() {
       </div>
 
       {/* Chips filter aktif */}
-      {(categoryName || authorName || typeName) && (
+      {(categoryName || authorName || typeName || tagName) && (
         <div className="flex flex-wrap gap-1.5">
-          {[typeName, categoryName && `Kategori: ${categoryName}`, authorName && `Author: ${authorName}`]
+          {[typeName, categoryName && `Kategori: ${categoryName}`, authorName && `Author: ${authorName}`, tagName && `Tag: ${tagName}`]
             .filter(Boolean)
             .map((chip) => (
               <Badge key={chip} variant="secondary" className="gap-1 rounded-full pr-1">
@@ -200,6 +203,7 @@ export default function ArticlesPage() {
                       article_type: chip === typeName ? undefined : query.article_type,
                       category: chip === `Kategori: ${categoryName}` ? undefined : query.category,
                       author: chip === `Author: ${authorName}` ? undefined : query.author,
+                      tag: chip === `Tag: ${tagName}` ? undefined : query.tag,
                     })
                   }
                 >
@@ -247,7 +251,7 @@ export default function ArticlesPage() {
               className="font-medium text-foreground underline underline-offset-2"
               onClick={() => {
                 setSearchInput("");
-                setParam({ search: undefined, status: undefined, article_type: undefined, category: undefined, author: undefined });
+                setParam({ search: undefined, status: undefined, article_type: undefined, category: undefined, author: undefined, tag: undefined });
               }}
             >
               Reset pencarian & filter

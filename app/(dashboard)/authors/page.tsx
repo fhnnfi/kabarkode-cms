@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -9,15 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -27,11 +21,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MediaPicker } from "@/components/media/media-picker";
+import { EmptyState } from "@/components/brand/empty-state";
 import { slugify } from "@/lib/utils/slug";
+import { articlesApi } from "@/lib/api/articles";
 import { useAuthorCrud, useAuthors } from "@/features/taxonomy/hooks";
+import { useMedia } from "@/features/media/hooks";
 import { authorFormSchema, type AuthorFormValues } from "@/lib/validation/schemas";
 import type { Author } from "@/types/models";
 
+/**
+ * Authors (redesign §51): profile cards, bukan tabel padat. Jumlah artikel
+ * per author diambil dari meta.total (backend belum punya endpoint stats).
+ */
 export default function AuthorsPage() {
   const { data: authors, isLoading, isError, refetch } = useAuthors();
   const crud = useAuthorCrud();
@@ -39,6 +40,7 @@ export default function AuthorsPage() {
   const [deleting, setDeleting] = useState<Author | null>(null);
   const [open, setOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const form = useForm<AuthorFormValues>({
     resolver: zodResolver(authorFormSchema),
@@ -46,6 +48,7 @@ export default function AuthorsPage() {
   });
 
   const avatarId = form.watch("avatar_media_id");
+  const { data: avatarMedia } = useMedia(avatarId);
 
   function startCreate() {
     setEditing(null);
@@ -74,67 +77,70 @@ export default function AuthorsPage() {
   }
 
   const busy = crud.create.isPending || crud.update.isPending;
+  const filtered = (authors ?? []).filter(
+    (a) =>
+      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      a.slug.includes(search.toLowerCase()),
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-4xl space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Authors</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Authors</h1>
           <p className="text-sm text-muted-foreground">Profil penulis KabarKode.</p>
         </div>
-        <Button onClick={startCreate}><Plus /> Author Baru</Button>
+        <Button onClick={startCreate}>
+          <Plus /> New Author
+        </Button>
+      </div>
+
+      <div className="relative max-w-sm">
+        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cari author…"
+          className="bg-card pl-8"
+          aria-label="Cari author"
+        />
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-40 rounded-2xl" />
+          ))}
+        </div>
       ) : isError ? (
-        <div className="rounded-lg border py-10 text-center text-sm text-destructive">
-          Gagal memuat authors. <Button variant="link" onClick={() => refetch()}>Coba lagi</Button>
+        <div className="rounded-xl border bg-card py-10 text-center text-sm text-destructive">
+          Gagal memuat authors.{" "}
+          <Button variant="link" onClick={() => refetch()}>
+            Coba lagi
+          </Button>
+        </div>
+      ) : filtered.length > 0 ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((a) => (
+            <AuthorCard
+              key={a.id}
+              author={a}
+              onEdit={() => startEdit(a)}
+              onDelete={() => setDeleting(a)}
+            />
+          ))}
         </div>
       ) : authors && authors.length > 0 ? (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-14">Avatar</TableHead>
-                <TableHead>Nama</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead className="hidden max-w-[300px] md:table-cell">Bio</TableHead>
-                <TableHead className="w-24 text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {authors.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell>
-                    <Avatar size="sm">
-                      <AvatarFallback>{a.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                  </TableCell>
-                  <TableCell className="font-medium">{a.name}</TableCell>
-                  <TableCell className="font-mono text-xs">{a.slug}</TableCell>
-                  <TableCell className="hidden max-w-[300px] truncate text-muted-foreground md:table-cell">
-                    {a.bio ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" aria-label={`Edit ${a.name}`} onClick={() => startEdit(a)}>
-                        <Pencil />
-                      </Button>
-                      <Button variant="ghost" size="icon" aria-label={`Hapus ${a.name}`} onClick={() => setDeleting(a)}>
-                        <Trash2 className="text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="rounded-xl border bg-card py-12 text-center text-sm text-muted-foreground">
+          Tidak ada author yang cocok dengan pencarian.
         </div>
       ) : (
-        <div className="rounded-lg border py-12 text-center text-sm text-muted-foreground">
-          Belum ada author. <Button variant="link" onClick={startCreate}>Buat author pertama</Button>
-        </div>
+        <EmptyState
+          title="Belum ada author."
+          description="Tulis profil orang-orang di balik cerita KabarKode."
+          actionLabel="Buat author pertama"
+          onAction={startCreate}
+        />
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -145,6 +151,7 @@ export default function AuthorsPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
             <div className="flex items-center gap-3">
               <Avatar className="size-14">
+                {avatarMedia && <AvatarImage src={avatarMedia.public_url} alt="Avatar" />}
                 <AvatarFallback>{form.watch("name")?.slice(0, 2).toUpperCase() ?? "?"}</AvatarFallback>
               </Avatar>
               <div className="space-y-1">
@@ -152,7 +159,9 @@ export default function AuthorsPage() {
                   Pilih Avatar
                 </Button>
                 {avatarId && (
-                  <p className="text-xs text-muted-foreground">Avatar terpilih (media id {avatarId.slice(0, 8)}…)</p>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    avatar: media {avatarId.slice(0, 8)}…
+                  </p>
                 )}
               </div>
             </div>
@@ -163,7 +172,7 @@ export default function AuthorsPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="author-slug">Slug</Label>
-              <Input id="author-slug" placeholder="kosongkan = otomatis" {...form.register("slug")} />
+              <Input id="author-slug" className="font-mono text-sm" placeholder="kosongkan = otomatis" {...form.register("slug")} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="author-bio">Bio</Label>
@@ -200,11 +209,56 @@ export default function AuthorsPage() {
               disabled={crud.remove.isPending}
               onClick={() => deleting && crud.remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })}
             >
-              Hapus
+              Hapus author
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function AuthorCard({
+  author,
+  onEdit,
+  onDelete,
+}: {
+  author: Author;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const count = useQuery({
+    queryKey: ["stats", "author", author.slug],
+    queryFn: () => articlesApi.listAll({ author: author.slug, limit: 1 }),
+    staleTime: 60_000,
+  });
+  return (
+    <div className="kk-transition group/author rounded-2xl border bg-card p-5 text-center hover:border-foreground/25 hover:shadow-sm">
+      <Avatar className="mx-auto size-16">
+        <AvatarFallback className="bg-black text-lg text-white">
+          {author.name.slice(0, 2).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      <p className="mt-3 truncate text-sm font-bold tracking-tight">{author.name}</p>
+      <p className="font-mono text-xs text-muted-foreground">@{author.slug}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {count.data ? `${count.data.meta.total} artikel` : "…"}
+      </p>
+      <div className="mt-3 flex justify-center gap-1">
+        <Button variant="ghost" size="sm" asChild className="kk-transition gap-1 text-xs">
+          <Link href={`/articles?author=${author.slug}`}>
+            View articles →
+          </Link>
+        </Button>
+      </div>
+      <div className="mt-1 flex justify-center gap-1 opacity-0 transition-opacity group-hover/author:opacity-100 focus-within:opacity-100">
+        <Button variant="ghost" size="icon" className="size-7" aria-label={`Edit ${author.name}`} onClick={onEdit}>
+          <Pencil className="size-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="size-7" aria-label={`Hapus ${author.name}`} onClick={onDelete}>
+          <Trash2 className="size-3.5 text-destructive" />
+        </Button>
+      </div>
     </div>
   );
 }
