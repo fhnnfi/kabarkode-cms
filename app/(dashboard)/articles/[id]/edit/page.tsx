@@ -21,7 +21,9 @@ export default function EditArticlePage() {
     );
   }
 
-  if (isError || !data) {
+  // Data dari cache hasil create/publish tetap dipakai walau refetch publik
+  // gagal (GET /articles/:id backend tidak mengembalikan draft — gap backend).
+  if (!data) {
     return (
       <Alert variant="destructive">
         <AlertTitle>Gagal memuat artikel</AlertTitle>

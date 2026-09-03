@@ -23,7 +23,24 @@ export function useArticles(query: ArticleListQuery) {
 export function useArticle(id: string | null) {
   return useQuery({
     queryKey: articleKeys.detail(id ?? ""),
-    queryFn: () => articlesApi.get(id!),
+    queryFn: async () => {
+      try {
+        return await articlesApi.get(id!);
+      } catch (err) {
+        // Gap backend: GET /articles/:id publik dan 404 untuk draft/archived.
+        // Fallback lewat endpoint staff /articles/admin/all (requirement redesign
+        // §81 melarang ubah backend tanpa perlu).
+        if ((err as { status?: number })?.status === 404) {
+          for (let page = 1; page <= 5; page++) {
+            const res = await articlesApi.listAll({ limit: 100, page });
+            const found = res.items.find((a) => a.id === id);
+            if (found) return found;
+            if (page >= Math.ceil(res.meta.total / 100)) break;
+          }
+        }
+        throw err;
+      }
+    },
     enabled: Boolean(id),
     staleTime: 5 * 60_000,
   });

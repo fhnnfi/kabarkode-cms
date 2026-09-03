@@ -29,7 +29,8 @@ import { TagChips } from "@/features/articles/components/tag-chips";
 import { CoverDropzone } from "@/features/articles/components/cover-dropzone";
 import { articleFormSchema, type ArticleFormValues } from "@/lib/validation/schemas";
 import { slugify } from "@/lib/utils/slug";
-import { useCreateArticle, useUpdateArticle, usePublishArticle, useArchiveArticle } from "@/features/articles/hooks";
+import { useCreateArticle, useUpdateArticle, usePublishArticle, useArchiveArticle, articleKeys } from "@/features/articles/hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import { STATUS_CONFIG, ARTICLE_TYPE_OPTIONS } from "@/features/articles/status-config";
 import { useAuth } from "@/features/auth/auth-provider";
 import { can } from "@/lib/auth/permissions";
@@ -69,6 +70,7 @@ type SaveState = "saved" | "unsaved" | "saving";
  */
 export function ArticleForm({ article }: ArticleFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const isEdit = Boolean(article);
 
@@ -169,7 +171,12 @@ export function ArticleForm({ article }: ArticleFormProps) {
 
   async function onSaveDraft() {
     const result = await save("draft");
-    if (result && !isEdit) router.replace(`/articles/${result.id}/edit`);
+    if (result && !isEdit) {
+      // Simpan hasil create ke cache detail: GET /articles/:id publik tidak
+      // mengembalikan draft (backend tidak mengirim user), jadi hindari refetch.
+      queryClient.setQueryData(articleKeys.detail(result.id), result);
+      router.replace(`/articles/${result.id}/edit`);
+    }
   }
 
   const [publishConfirm, setPublishConfirm] = useState(false);

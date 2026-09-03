@@ -101,7 +101,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         className="top-[15%] max-h-[80vh] translate-y-0 gap-0 overflow-hidden rounded-2xl border-border p-0 sm:max-w-xl"
       >
         <DialogTitle className="sr-only">Command palette</DialogTitle>
-        <Command shouldFilter={query.trim().length < 2} loop>
+        <Command loop>
           <CommandInput
             value={query}
             onValueChange={setQuery}
@@ -114,13 +114,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
             <CommandGroup heading="Create">
               {can(user?.role, "manage_articles") && (
-                <CommandItem value="new-article" onSelect={() => go("/articles/new")}>
+                <CommandItem value="new article tulis artikel" onSelect={() => go("/articles/new")}>
                   <FilePlus2 />
                   New Article
                 </CommandItem>
               )}
               {can(user?.role, "manage_media") && (
-                <CommandItem value="upload-media" onSelect={() => go("/media")}>
+                <CommandItem value="upload media gambar aset" onSelect={() => go("/media")}>
                   <Upload />
                   Upload Media
                 </CommandItem>
@@ -144,7 +144,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   {results.map((a) => (
                     <CommandItem
                       key={a.id}
-                      value={`article-${a.id}`}
+                      value={a.title}
                       onSelect={() => go(`/articles/${a.id}/edit`)}
                     >
                       <FileText />

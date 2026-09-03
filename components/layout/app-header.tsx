@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, User } from "lucide-react";
@@ -62,21 +63,20 @@ export function AppHeader() {
       <Breadcrumb className="min-w-0 flex-1">
         <BreadcrumbList className="min-w-0 text-sm">
           {segments.map((s, i) => (
-            <BreadcrumbItem key={s.href} className="min-w-0">
+            <Fragment key={s.href}>
               {i > 0 && <BreadcrumbSeparator className="hidden sm:flex" />}
-              {i === segments.length - 1 ? (
-                <BreadcrumbPage className="truncate font-semibold">
-                  {s.label}
-                </BreadcrumbPage>
-              ) : (
-                <BreadcrumbSeparator className="flex sm:hidden" />
-              )}
-              {i < segments.length - 1 && (
-                <BreadcrumbLink asChild className="hidden truncate sm:inline-flex">
-                  <Link href={s.isId ? "/articles" : s.href}>{s.label}</Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
+              <BreadcrumbItem className="min-w-0">
+                {i === segments.length - 1 ? (
+                  <BreadcrumbPage className="truncate font-semibold">
+                    {s.label}
+                  </BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild className="hidden truncate sm:inline-flex">
+                    <Link href={s.isId ? "/articles" : s.href}>{s.label}</Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            </Fragment>
           ))}
         </BreadcrumbList>
       </Breadcrumb>
