@@ -3,25 +3,38 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useArticles } from "@/features/articles/hooks";
-import { ArticleTable } from "@/features/articles/components/article-table";
+import { ArticleList } from "@/features/articles/components/article-list";
+import { EmptyState } from "@/components/brand/empty-state";
 import { STATUS_OPTIONS, ARTICLE_TYPE_OPTIONS } from "@/features/articles/status-config";
 import { useCategories, useAuthors } from "@/features/taxonomy/hooks";
+import { cn } from "@/lib/utils";
 import type { ArticleListQuery } from "@/types/models";
 
-const ALL = "__all__";
-
+/**
+ * Articles workspace (redesign §18–§19): tabs status menggantikan dropdown
+ * status, filter lanjutan di dalam popover, state filter persist di URL (§78).
+ */
 export default function ArticlesPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -41,6 +54,7 @@ export default function ArticlesPage() {
   );
 
   const [searchInput, setSearchInput] = useState(query.search ?? "");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const { data, isLoading, isError, refetch } = useArticles(query);
   const categories = useCategories();
   const authors = useAuthors();
@@ -59,28 +73,32 @@ export default function ArticlesPage() {
   );
 
   const meta = data?.meta;
-  const hasFilters = Boolean(query.search || query.status || query.article_type || query.category || query.author);
+  const advancedFilters = Boolean(query.article_type || query.category || query.author);
+  const activeCount = [query.article_type, query.category, query.author].filter(Boolean).length;
+  const categoryName = categories.data?.find((c) => c.slug === query.category)?.name;
+  const authorName = authors.data?.find((a) => a.slug === query.author)?.name;
+  const typeName = ARTICLE_TYPE_OPTIONS.find((t) => t.value === query.article_type)?.label;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="mx-auto max-w-5xl space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Artikel</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Articles</h1>
           <p className="text-sm text-muted-foreground">
-            Kelola seluruh konten KabarKode — server-side search, filter, dan pagination.
+            Kelola cerita dan alur publikasi KabarKode.
           </p>
         </div>
         <Button asChild>
           <Link href="/articles/new">
-            <Plus /> Artikel Baru
+            <Plus /> New Article
           </Link>
         </Button>
       </div>
 
-      {/* Filter bar — state di URL agar bisa dibagikan/di-bookmark (§52) */}
+      {/* Search + Filters (§19) */}
       <div className="flex flex-wrap items-center gap-2">
         <form
-          className="relative"
+          className="relative min-w-56 flex-1"
           onSubmit={(e) => {
             e.preventDefault();
             setParam({ search: searchInput.trim() || undefined });
@@ -90,62 +108,166 @@ export default function ArticlesPage() {
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Cari judul / konten (min. 2 karakter)…"
-            className="w-64 pl-8"
+            placeholder="Cari judul / slug / excerpt…"
+            className="bg-card pl-8"
             aria-label="Cari artikel"
           />
         </form>
-        <Select value={query.status ?? ALL} onValueChange={(v) => setParam({ status: v === ALL ? undefined : v })}>
-          <SelectTrigger className="w-36" aria-label="Filter status"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Semua status</SelectItem>
-            {STATUS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={query.article_type ?? ALL} onValueChange={(v) => setParam({ article_type: v === ALL ? undefined : v })}>
-          <SelectTrigger className="w-36" aria-label="Filter tipe"><SelectValue placeholder="Tipe" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Semua tipe</SelectItem>
-            {ARTICLE_TYPE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={query.category ?? ALL} onValueChange={(v) => setParam({ category: v === ALL ? undefined : v })}>
-          <SelectTrigger className="w-44" aria-label="Filter kategori"><SelectValue placeholder="Kategori" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Semua kategori</SelectItem>
-            {(categories.data ?? []).map((c) => <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={query.author ?? ALL} onValueChange={(v) => setParam({ author: v === ALL ? undefined : v })}>
-          <SelectTrigger className="w-44" aria-label="Filter author"><SelectValue placeholder="Author" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Semua author</SelectItem>
-            {(authors.data ?? []).map((a) => <SelectItem key={a.id} value={a.slug}>{a.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        {hasFilters && (
-          <Button variant="ghost" onClick={() => { setSearchInput(""); setParam({ search: undefined, status: undefined, article_type: undefined, category: undefined, author: undefined }); }}>
-            Reset
-          </Button>
-        )}
+        <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="kk-transition gap-2 bg-card">
+              <SlidersHorizontal /> Filters
+              {activeCount > 0 && (
+                <Badge className="rounded-full bg-black px-1.5 text-[10px] text-white">
+                  {activeCount}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 rounded-xl p-4">
+            <p className="mb-3 text-sm font-semibold">Filters</p>
+
+            <Label className="text-xs text-muted-foreground">Category</Label>
+            <CategoryAuthorPicker
+              placeholder="Search category…"
+              options={(categories.data ?? []).map((c) => ({ value: c.slug, label: c.name }))}
+              value={query.category}
+              onChange={(v) => setParam({ category: v })}
+            />
+
+            <Label className="mt-3 block text-xs text-muted-foreground">Author</Label>
+            <CategoryAuthorPicker
+              placeholder="Search author…"
+              options={(authors.data ?? []).map((a) => ({ value: a.slug, label: a.name }))}
+              value={query.author}
+              onChange={(v) => setParam({ author: v })}
+            />
+
+            <Label className="mt-3 block text-xs text-muted-foreground">Article Type</Label>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {ARTICLE_TYPE_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() =>
+                    setParam({ article_type: query.article_type === o.value ? undefined : o.value })
+                  }
+                  className={cn(
+                    "kk-transition rounded-lg border px-2.5 py-1 text-xs font-medium",
+                    query.article_type === o.value
+                      ? "border-black bg-black text-white"
+                      : "bg-card hover:border-foreground/30",
+                  )}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setParam({ article_type: undefined, category: undefined, author: undefined });
+                  setFiltersOpen(false);
+                }}
+              >
+                Reset
+              </Button>
+              <Button size="sm" onClick={() => setFiltersOpen(false)}>
+                Apply
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
+
+      {/* Chips filter aktif */}
+      {(categoryName || authorName || typeName) && (
+        <div className="flex flex-wrap gap-1.5">
+          {[typeName, categoryName && `Kategori: ${categoryName}`, authorName && `Author: ${authorName}`]
+            .filter(Boolean)
+            .map((chip) => (
+              <Badge key={chip} variant="secondary" className="gap-1 rounded-full pr-1">
+                {chip}
+                <button
+                  type="button"
+                  aria-label={`Hapus filter ${chip}`}
+                  className="kk-transition rounded-full p-0.5 hover:bg-foreground/10"
+                  onClick={() =>
+                    setParam({
+                      article_type: chip === typeName ? undefined : query.article_type,
+                      category: chip === `Kategori: ${categoryName}` ? undefined : query.category,
+                      author: chip === `Author: ${authorName}` ? undefined : query.author,
+                    })
+                  }
+                >
+                  <X className="size-3" />
+                </button>
+              </Badge>
+            ))}
+        </div>
+      )}
+
+      {/* Tabs status menggantikan dropdown status (§18) */}
+      <Tabs
+        value={query.status ?? "all"}
+        onValueChange={(v) => setParam({ status: v === "all" ? undefined : v })}
+      >
+        <TabsList className="kk-transition h-9 rounded-lg bg-card">
+          <TabsTrigger value="all" className="rounded-md">All</TabsTrigger>
+          {STATUS_OPTIONS.map((o) => (
+            <TabsTrigger key={o.value} value={o.value} className="rounded-md">
+              {o.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {isLoading ? (
         <div className="space-y-2">
-          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-xl" />
+          ))}
         </div>
       ) : isError ? (
-        <div className="rounded-lg border py-12 text-center text-sm">
-          <p className="text-destructive">Gagal memuat artikel.</p>
-          <Button variant="outline" className="mt-3" onClick={() => refetch()}>Coba lagi</Button>
+        <div className="rounded-xl border bg-card py-12 text-center text-sm">
+          <p className="font-medium">Something went wrong.</p>
+          <p className="mt-1 text-muted-foreground">Kami tidak bisa memuat artikelmu.</p>
+          <Button variant="outline" className="mt-3" onClick={() => refetch()}>
+            Coba lagi
+          </Button>
         </div>
+      ) : (data?.items.length ?? 0) === 0 ? (
+        query.search || query.status || advancedFilters ? (
+          <div className="rounded-xl border bg-card py-12 text-center text-sm text-muted-foreground">
+            Tidak ada artikel yang cocok.{" "}
+            <button
+              className="font-medium text-foreground underline underline-offset-2"
+              onClick={() => {
+                setSearchInput("");
+                setParam({ search: undefined, status: undefined, article_type: undefined, category: undefined, author: undefined });
+              }}
+            >
+              Reset pencarian & filter
+            </button>
+          </div>
+        ) : (
+          <EmptyState
+            title="Belum ada artikel."
+            description="Cerita pertamamu dimulai di sini."
+            actionLabel="Create Article"
+            actionHref="/articles/new"
+          />
+        )
       ) : (
         <>
-          <ArticleTable articles={data?.items ?? []} />
+          <ArticleList articles={data!.items} />
           {meta && (
             <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                Halaman {meta.page} dari {Math.max(1, meta.totalPages)} · {meta.total} artikel
+              <span className="font-mono text-xs">
+                {meta.page}/{Math.max(1, meta.totalPages)} · {meta.total} artikel
               </span>
               <div className="flex gap-2">
                 <Button
@@ -170,5 +292,46 @@ export default function ArticlesPage() {
         </>
       )}
     </div>
+  );
+}
+
+/** Picker searchable untuk kategori/author di dalam popover filter (§19). */
+function CategoryAuthorPicker({
+  placeholder,
+  options,
+  value,
+  onChange,
+}: {
+  placeholder: string;
+  options: { value: string; label: string }[];
+  value: string | undefined;
+  onChange: (v: string | undefined) => void;
+}) {
+  return (
+    <Command className="mt-1.5 rounded-lg border">
+      <CommandInput placeholder={placeholder} className="h-8" />
+      <CommandList className="max-h-40">
+        <CommandEmpty>Tidak ada.</CommandEmpty>
+        <CommandGroup>
+          <CommandItem
+            value="__all__"
+            onSelect={() => onChange(undefined)}
+            className={cn(!value && "bg-accent")}
+          >
+            Semua
+          </CommandItem>
+          {options.map((o) => (
+            <CommandItem
+              key={o.value}
+              value={o.label}
+              onSelect={() => onChange(o.value)}
+              className={cn(value === o.value && "bg-accent")}
+            >
+              {o.label}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </Command>
   );
 }
