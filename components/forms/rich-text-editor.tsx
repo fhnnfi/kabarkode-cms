@@ -122,10 +122,11 @@ function LinkPopover({ editor }: { editor: Editor }) {
   const [url, setUrl] = useState("");
   const active = editor.isActive("link");
 
-  useEffect(() => {
-    if (open) setUrl((editor.getAttributes("link").href as string) ?? "https://");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  function onOpenChange(next: boolean) {
+    // Inisialisasi nilai saat membuka — bukan setState di dalam effect.
+    if (next) setUrl((editor.getAttributes("link").href as string) ?? "https://");
+    setOpen(next);
+  }
 
   function apply() {
     const value = url.trim();
@@ -154,7 +155,7 @@ function LinkPopover({ editor }: { editor: Editor }) {
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <Button
           type="button"
