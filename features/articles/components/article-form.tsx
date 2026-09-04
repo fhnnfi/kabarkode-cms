@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Archive, ArrowLeft, CalendarClock, Check, Eye, Loader2, Pencil, Send } from "lucide-react";
+import { Archive, ArrowLeft, CalendarClock, Check, Eye, FileDown, Loader2, Pencil, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { CategoryPicker } from "@/features/articles/components/category-picker";
 import { AuthorPicker } from "@/features/articles/components/author-picker";
 import { ScheduleDialog } from "@/features/articles/components/schedule-dialog";
+import { ImportMarkdownDialog } from "@/features/articles/components/import-markdown-dialog";
 import { TagChips } from "@/features/articles/components/tag-chips";
 import { CoverDropzone } from "@/features/articles/components/cover-dropzone";
 import { articleFormSchema, type ArticleFormValues } from "@/lib/validation/schemas";
@@ -36,6 +37,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authorsApi } from "@/lib/api/authors";
 import { STATUS_CONFIG, ARTICLE_TYPE_OPTIONS } from "@/features/articles/status-config";
 import { formatDate } from "@/lib/utils/format";
+import type { ParsedMarkdownArticle } from "@/lib/utils/markdown-import";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { can } from "@/lib/auth/permissions";
@@ -101,6 +103,11 @@ export function ArticleForm({ article }: ArticleFormProps) {
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [slugEditing, setSlugEditing] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  // Seed konten RichTextEditor: Tiptap hanya membaca `value` saat mount,
+  // jadi hasil import markdown masuk lewat state ini + key untuk remount.
+  const [editorSeed, setEditorSeed] = useState(article?.content ?? "");
+  const [editorKey, setEditorKey] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>(isEdit ? "saved" : "unsaved");
   const savedRef = useRef(false);
   // Snapshot HTML konten saat terakhir kali tersimpan — dipakai untuk
@@ -258,6 +265,28 @@ export function ArticleForm({ article }: ArticleFormProps) {
     router.replace(base, { scroll: false });
   }
 
+  /**
+   * Hasil import .md: isi semua field form + remount editor dengan konten
+   * baru (Tiptap hanya membaca seed saat mount). Snapshot savedHtml ikut
+   * diganti agar deteksi dirty tetap benar.
+   */
+  function onImportApplied(parsed: ParsedMarkdownArticle, coverMediaId: string | null) {
+    const slug = slugify(parsed.title);
+    form.setValue("title", parsed.title, { shouldValidate: true });
+    form.setValue("slug", slug, { shouldValidate: true });
+    form.setValue("excerpt", parsed.excerpt);
+    form.setValue("content", parsed.contentHtml, { shouldValidate: true });
+    if (parsed.source_name) form.setValue("source_name", parsed.source_name);
+    if (parsed.source_url) form.setValue("source_url", parsed.source_url);
+    if (coverMediaId) form.setValue("cover_media_id", coverMediaId);
+    setSlugTouched(true);
+    setEditorSeed(parsed.contentHtml);
+    setEditorKey((k) => k + 1);
+    savedHtmlRef.current = parsed.contentHtml;
+    onDirty();
+    toast.success(`Import “${parsed.title.slice(0, 40)}”${coverMediaId ? " + cover" : ""} — periksa lalu simpan.`);
+  }
+
   // Keyboard shortcuts global editor (§42): Ctrl/Cmd+S simpan, Ctrl/Cmd+Enter publish.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -311,6 +340,15 @@ export function ArticleForm({ article }: ArticleFormProps) {
           <Button variant="outline" size="sm" onClick={onSaveDraft} disabled={busy}>
             {busy ? <Loader2 className="animate-spin" /> : null}
             Save Draft
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="kk-transition"
+            onClick={() => setImportOpen(true)}
+            disabled={busy}
+          >
+            <FileDown /> Import
           </Button>
           {can(user?.role, "publish_articles") && currentStatus !== "published" && (
             <Button
@@ -432,7 +470,8 @@ export function ArticleForm({ article }: ArticleFormProps) {
           <Separator className="my-5" />
 
           <RichTextEditor
-            value={article?.content ?? ""}
+            key={editorKey}
+            value={editorSeed}
             editable={!busy}
             onChange={(html) => {
               form.setValue("content", html, { shouldValidate: true });
@@ -659,6 +698,9 @@ export function ArticleForm({ article }: ArticleFormProps) {
       {article && scheduleOpen && (
         <ScheduleDialog open={scheduleOpen} onOpenChange={onScheduleDialogChange} article={article} />
       )}
+
+      {/* Import artikel dari berkas .md (format newscrap). */}
+      <ImportMarkdownDialog open={importOpen} onOpenChange={setImportOpen} onApply={onImportApplied} />
 
     </div>
   );
