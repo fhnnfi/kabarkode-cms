@@ -36,6 +36,7 @@ import { authorsApi } from "@/lib/api/authors";
 import { STATUS_CONFIG, ARTICLE_TYPE_OPTIONS } from "@/features/articles/status-config";
 import { useAuth } from "@/features/auth/auth-provider";
 import { can } from "@/lib/auth/permissions";
+import { setUnsavedDirty } from "@/lib/unsaved-store";
 import { cn } from "@/lib/utils";
 import type { Article, ArticleStatus, ArticleType } from "@/types/models";
 
@@ -90,9 +91,11 @@ export function ArticleForm({ article }: ArticleFormProps) {
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [slugEditing, setSlugEditing] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
-  const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>(isEdit ? "saved" : "unsaved");
   const savedRef = useRef(false);
+  // Snapshot HTML konten saat terakhir kali tersimpan — dipakai untuk
+  // membedakan perubahan nyata vs event blur/spurious dari editor.
+  const savedHtmlRef = useRef<string>(article?.content ?? "");
 
   const values = useWatch({ control: form.control });
   const title = values.title ?? "";
@@ -136,6 +139,9 @@ export function ArticleForm({ article }: ArticleFormProps) {
     setSaveState("unsaved");
   }, []);
 
+  // Sinkron ke store global — NavigationGuard menahan semua link SPA saat dirty.
+  useEffect(() => setUnsavedDirty(dirty), [dirty]);
+
   function buildPayload(status?: ArticleStatus): Record<string, unknown> {
     const v = form.getValues();
     const payload: Record<string, unknown> = {
@@ -172,6 +178,9 @@ export function ArticleForm({ article }: ArticleFormProps) {
         result = await createArticle.mutateAsync(buildPayload(status ?? "draft"));
       }
       savedRef.current = true;
+      // Bandingkan dengan HTML versi editor (server bisa menormalisasi —
+      // yang memicu onUpdate lagi dan membuat dirty palsu).
+      savedHtmlRef.current = form.getValues().content;
       setDirty(false);
       setSaveState("saved");
       return result;
@@ -234,32 +243,15 @@ export function ArticleForm({ article }: ArticleFormProps) {
   const excerptLen = (values.excerpt ?? "").length;
   const currentStatus = (values.status ?? "draft") as ArticleStatus;
 
-  function guardedLink(href: string, label: string) {
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        asChild={!dirty}
-        onClick={dirty ? () => setLeaveTarget(href) : undefined}
-      >
-        {dirty ? (
-          <span className="flex items-center gap-1">
-            <ArrowLeft /> {label}
-          </span>
-        ) : (
-          <Link href={href} className="flex items-center gap-1">
-            <ArrowLeft /> {label}
-          </Link>
-        )}
-      </Button>
-    );
-  }
-
   return (
     <div className="flex min-h-[calc(100svh-3.5rem)] flex-col">
       {/* Publishing header (§26): save state + Publish selalu terlihat. */}
       <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-2 border-b bg-background/85 px-4 py-2.5 backdrop-blur md:-mx-6 md:px-6">
-        {guardedLink("/articles", "Articles")}
+        <Button variant="ghost" size="sm" asChild className="gap-1">
+          <Link href="/articles">
+            <ArrowLeft /> Articles
+          </Link>
+        </Button>
         <SaveStateIndicator state={saveState} status={currentStatus} />
         <div className="ml-auto flex items-center gap-2">
           {isEdit && (
@@ -396,9 +388,14 @@ export function ArticleForm({ article }: ArticleFormProps) {
             editable={!busy}
             onChange={(html) => {
               form.setValue("content", html, { shouldValidate: true });
-              onDirty();
+              // Hanya tandai dirty bila konten benar-benar berbeda dari
+              // snapshot terakhir yang tersimpan (blur pasca-save tidak lagi
+              // memunculkan 'unsaved changes' palsu).
+              if (html !== savedHtmlRef.current) {
+                setDirty(true);
+                setSaveState("unsaved");
+              }
             }}
-            onBlur={onDirty}
           />
           {form.formState.errors.content && (
             <p className="mt-2 text-sm text-destructive">{form.formState.errors.content.message}</p>
@@ -617,23 +614,6 @@ export function ArticleForm({ article }: ArticleFormProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Konfirmasi tinggalkan halaman dengan perubahan belum disimpan (§43) */}
-      <Dialog open={Boolean(leaveTarget)} onOpenChange={(o) => !o && setLeaveTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ada perubahan belum disimpan</DialogTitle>
-            <DialogDescription>Artikelmu punya perubahan yang belum disimpan.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setLeaveTarget(null)}>
-              Tetap di sini
-            </Button>
-            <Button variant="destructive" onClick={() => router.push(leaveTarget!)}>
-              Buang perubahan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

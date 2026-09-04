@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
 import { AuthGuard } from "@/components/layout/auth-guard";
+import { NavigationGuard } from "@/components/layout/navigation-guard";
 
 export const metadata: Metadata = {
   title: { default: "Dashboard", template: "%s · KabarKode CMS" },
@@ -20,6 +21,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <SidebarInset className="min-h-svh">
             <AppHeader />
             <main className="flex-1 p-4 md:p-6">{children}</main>
+            <NavigationGuard />
           </SidebarInset>
         </SidebarProvider>
       </TooltipProvider>

@@ -4,7 +4,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, User } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/brand/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
@@ -54,7 +54,6 @@ function useBreadcrumbSegments() {
 export function AppHeader() {
   const { user, logout } = useAuth();
   const segments = useBreadcrumbSegments();
-  const initials = (user?.email ?? "?").slice(0, 2).toUpperCase();
 
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur">
@@ -90,11 +89,7 @@ export function AppHeader() {
               className="kk-transition size-9 rounded-full ring-offset-2 ring-offset-background data-[state=open]:ring-2 data-[state=open]:ring-brand"
               aria-label="Menu pengguna"
             >
-              <Avatar size="sm">
-                <AvatarFallback className="bg-black text-[10px] text-white">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar className="size-8" fallbackClassName="text-[10px]" />
             </Button>
           </DropdownMenuTrigger>
           {/* Redesign §62: user menu sederhana. */}

@@ -192,8 +192,10 @@ export function RichTextEditor({ value, onChange, onBlur, editable = true }: Ric
   // tanpa ref closure-nya basi dan perubahan tidak tersimpan.
   const onChangeRef = useRef(onChange);
   const onBlurRef = useRef(onBlur);
-  onChangeRef.current = onChange;
-  onBlurRef.current = onBlur;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    onBlurRef.current = onBlur;
+  });
 
   const editor = useEditor({
     // SSR/Next.js: JANGAN render editor di server — tanpa ini, hidrasi bisa

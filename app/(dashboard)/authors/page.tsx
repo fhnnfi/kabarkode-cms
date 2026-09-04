@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MediaAvatar } from "@/components/brand/user-avatar";
 import {
   Dialog,
   DialogContent,
@@ -282,11 +283,12 @@ function AuthorCard({
   });
   return (
     <div className="kk-transition group/author rounded-2xl border bg-card p-5 text-center hover:border-foreground/25 hover:shadow-sm">
-      <Avatar className="mx-auto size-16">
-        <AvatarFallback className="bg-black text-lg text-white">
-          {author.name.slice(0, 2).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
+      <MediaAvatar
+        mediaId={author.avatar_media_id}
+        name={author.name}
+        className="mx-auto size-16"
+        fallbackClassName="text-lg"
+      />
       <p className="mt-3 truncate text-sm font-bold tracking-tight">{author.name}</p>
       <p className="font-mono text-xs text-muted-foreground">@{author.slug}</p>
       <p className="mt-1 text-xs text-muted-foreground">

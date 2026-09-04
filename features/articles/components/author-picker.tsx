@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { MediaAvatar } from "@/components/brand/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,11 +82,12 @@ export function AuthorPicker({
             <span className="flex min-w-0 items-center gap-2">
               {selected ? (
                 <>
-                  <Avatar size="sm">
-                    <AvatarFallback className="bg-black text-[9px] text-white">
-                      {selected.name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <MediaAvatar
+                    mediaId={selected.avatar_media_id}
+                    name={selected.name}
+                    className="size-6"
+                    fallbackClassName="text-[9px]"
+                  />
                   <span className="truncate">{selected.name}</span>
                   <span className="truncate font-mono text-[10px] text-muted-foreground">
                     @{selected.slug}
@@ -144,11 +145,12 @@ export function AuthorPicker({
                       }}
                       className="gap-2"
                     >
-                      <Avatar size="sm">
-                        <AvatarFallback className="bg-black text-[9px] text-white">
-                          {a.name.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <MediaAvatar
+                        mediaId={a.avatar_media_id}
+                        name={a.name}
+                        className="size-6"
+                        fallbackClassName="text-[9px]"
+                      />
                       <span className="min-w-0 flex-1 truncate">{a.name}</span>
                       <span className="truncate font-mono text-[10px] text-muted-foreground">
                         @{a.slug}

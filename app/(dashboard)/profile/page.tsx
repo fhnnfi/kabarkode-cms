@@ -78,8 +78,11 @@ export default function ProfilePage() {
         bio: body.bio?.trim() || null,
         avatar_media_id: body.avatar_media_id ?? null,
       }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      // Perbarui cache profil + daftar author (avatar di kartu/sidebar/header).
+      qc.setQueryData(["authors", "me"], updated);
       qc.invalidateQueries({ queryKey: ["authors"] });
+      qc.invalidateQueries({ queryKey: ["media"] });
       toast.success("Profil tersimpan");
     },
     onError: (err: NormalizedApiError) => toast.error(err.message || "Gagal menyimpan profil"),

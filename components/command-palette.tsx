@@ -12,6 +12,8 @@ import {
   Upload,
   UserPen,
 } from "lucide-react";
+import { Kbd } from "@/components/ui/kbd";
+import { NAV_SHORTCUTS } from "@/lib/nav-shortcuts";
 import {
   Command,
   CommandEmpty,
@@ -28,12 +30,20 @@ import {
 } from "@/components/ui/dialog";
 import { articlesApi } from "@/lib/api/articles";
 import { useAuth } from "@/features/auth/auth-provider";
+import { isUnsavedDirty } from "@/lib/unsaved-store";
 import { can } from "@/lib/auth/permissions";
 import type { Article } from "@/types/models";
 
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+/** Badge shortcut keyboard di sisi kanan item palette (UX: shortcut terlihat). */
+function ShortcutHint({ href }: { href: string }) {
+  const sc = NAV_SHORTCUTS.find((s) => s.href === href);
+  if (!sc) return null;
+  return <Kbd className="ml-auto">{sc.combo}</Kbd>;
 }
 
 /**
@@ -64,6 +74,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   }, [query, open, user]);
 
   function go(href: string) {
+    // Navigasi palette melewati <a> guard — hormati perubahan belum disimpan
+    // dengan membiarkan dialog global muncul (tunda pindah).
+    if (isUnsavedDirty()) {
+      onOpenChange(false);
+      setQuery("");
+      return;
+    }
     onOpenChange(false);
     setQuery("");
     router.push(href);
@@ -117,12 +134,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <CommandItem value="new article tulis artikel" onSelect={() => go("/articles/new")}>
                   <FilePlus2 />
                   New Article
+                  <ShortcutHint href="/articles/new" />
                 </CommandItem>
               )}
               {can(user?.role, "manage_media") && (
                 <CommandItem value="upload media gambar aset" onSelect={() => go("/media")}>
                   <Upload />
                   Upload Media
+                  <ShortcutHint href="/media" />
                 </CommandItem>
               )}
             </CommandGroup>
@@ -130,9 +149,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             <CommandSeparator />
             <CommandGroup heading="Navigate">
               {nav.map((n) => (
-                <CommandItem key={n.href} value={`nav-${n.href}`} onSelect={() => go(n.href)}>
+                <CommandItem key={n.href} value={`navigate ${n.title} ${n.href}`} onSelect={() => go(n.href)}>
                   <n.icon />
                   {n.title}
+                  <ShortcutHint href={n.href} />
                 </CommandItem>
               ))}
             </CommandGroup>

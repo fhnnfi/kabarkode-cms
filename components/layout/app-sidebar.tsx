@@ -24,7 +24,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { BrandLockup, BrandMark } from "@/components/brand/logo";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/brand/user-avatar";
 import { useAuth } from "@/features/auth/auth-provider";
 import { can, type Permission } from "@/lib/auth/permissions";
 
@@ -64,7 +64,6 @@ const ROLE_LABEL: Record<string, string> = {
 export function AppSidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const initials = (user?.email ?? "?").slice(0, 2).toUpperCase();
 
   return (
     <Sidebar collapsible="icon">
@@ -137,9 +136,7 @@ export function AppSidebar() {
       {/* Redesign §12, §62: user area di dasar sidebar. */}
       <SidebarFooter className="px-3 py-4">
         <div className="flex items-center gap-2.5 overflow-hidden group-data-[collapsible=icon]:justify-center">
-          <Avatar size="sm" className="ring-2 ring-brand/60">
-            <AvatarFallback className="bg-black text-xs text-white">{initials}</AvatarFallback>
-          </Avatar>
+          <UserAvatar className="size-8 shrink-0 ring-2 ring-brand/60" fallbackClassName="text-xs" />
           <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
             <span className="truncate text-sm font-semibold">
               {user?.email?.split("@")[0] ?? "—"}
