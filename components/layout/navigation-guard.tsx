@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { isUnsavedDirty, setUnsavedDirty, subscribeUnsaved } from "@/lib/unsaved-store";
+import { isUnsavedDirty, setUnsavedDirty } from "@/lib/unsaved-store";
 
 /**
  * Guard navigasi global: bila editor menandai ada perubahan belum disimpan,
@@ -22,9 +22,6 @@ export function NavigationGuard() {
   const router = useRouter();
   const pathname = usePathname();
   const [target, setTarget] = useState<string | null>(null);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => subscribeUnsaved(() => setDirty(isUnsavedDirty())), []);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
