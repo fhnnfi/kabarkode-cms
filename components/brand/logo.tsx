@@ -15,7 +15,7 @@ export function BrandMark({
     <span
       aria-hidden
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-xl bg-black font-mono font-bold text-white select-none",
+        "inline-flex shrink-0 items-center justify-center rounded-xl bg-primary font-mono font-bold text-primary-foreground select-none",
         className,
       )}
       style={{ width: size, height: size, fontSize: size * 0.34 }}

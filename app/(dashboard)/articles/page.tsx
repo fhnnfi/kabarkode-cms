@@ -121,7 +121,7 @@ export default function ArticlesPage() {
             <Button variant="outline" className="kk-transition gap-2 bg-card">
               <SlidersHorizontal /> Filters
               {activeCount > 0 && (
-                <Badge className="rounded-full bg-black px-1.5 text-[10px] text-white">
+                <Badge className="rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
                   {activeCount}
                 </Badge>
               )}
@@ -158,7 +158,7 @@ export default function ArticlesPage() {
                   className={cn(
                     "kk-transition rounded-lg border px-2.5 py-1 text-xs font-medium",
                     query.article_type === o.value
-                      ? "border-black bg-black text-white"
+                      ? "border-primary bg-primary text-primary-foreground"
                       : "bg-card hover:border-foreground/30",
                   )}
                 >

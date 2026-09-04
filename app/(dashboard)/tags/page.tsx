@@ -114,7 +114,7 @@ export default function TagsPage() {
               {/* Klik nama tag → lihat pemakaian artikel (§50) */}
               <Link
                 href={`/articles?tag=${t.slug}`}
-                className="kk-transition flex items-center gap-1.5 rounded-full bg-black py-1 pr-2 pl-3 text-sm font-medium text-white hover:bg-neutral-800"
+                className="kk-transition flex items-center gap-1.5 rounded-full bg-primary py-1 pr-2 pl-3 text-sm font-medium text-primary-foreground hover:opacity-85"
                 aria-label={`Lihat artikel dengan tag ${t.name}`}
               >
                 {t.name}

@@ -296,7 +296,7 @@ function AuthorCard({
       </p>
       <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
         {author.email ? (
-          <span className="kk-transition inline-flex items-center gap-1 rounded-full bg-brand/20 px-2 py-0.5 text-black">
+          <span className="kk-transition inline-flex items-center gap-1 rounded-full bg-brand/20 px-2 py-0.5 text-foreground">
             <span className="size-1.5 rounded-full bg-brand ring-1 ring-black/10" />
             {author.email}
           </span>

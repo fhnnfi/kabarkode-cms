@@ -109,23 +109,25 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Dark = warm charcoal (hue 106 sama dengan light), bukan abu netral dingin.
+     Primary dibalik: putih di atas gelap — identitas hitam/putih tetap. */
+  --background: oklch(0.185 0.004 106.45);
+  --foreground: oklch(0.955 0.002 106.45);
+  --card: oklch(0.225 0.004 106.45);
+  --card-foreground: oklch(0.955 0.002 106.45);
+  --popover: oklch(0.225 0.004 106.45);
+  --popover-foreground: oklch(0.955 0.002 106.45);
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: oklch(0.28 0.004 106.45);
+  --secondary-foreground: oklch(0.955 0.002 106.45);
+  --muted: oklch(0.28 0.004 106.45);
+  --muted-foreground: oklch(0.74 0.005 106.45);
+  --accent: oklch(0.3 0.005 106.45);
+  --accent-foreground: oklch(0.955 0.002 106.45);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --border: oklch(0.38 0.006 106.45);
+  --input: oklch(0.38 0.006 106.45);
   --ring: oklch(0.9069 0.2458 131.19);
   --brand: #a3ff12;
   --brand-foreground: #000000;
@@ -134,14 +136,14 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.922 0 0);
-  --sidebar-primary-foreground: oklch(0.205 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: oklch(0.21 0.004 106.45);
+  --sidebar-foreground: oklch(0.955 0.002 106.45);
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: oklch(0.28 0.004 106.45);
+  --sidebar-accent-foreground: oklch(0.955 0.002 106.45);
+  --sidebar-border: oklch(0.38 0.006 106.45);
+  --sidebar-ring: #a3ff12;
 }
 
 @layer base {
@@ -166,6 +168,6 @@
   /* Dropzone border bereaksi halus saat drag (redesign §28) */
   .kk-dropzone-active {
     border-color: var(--brand);
-    background-color: color-mix(in oklab, var(--brand) 8%, white);
+    background-color: color-mix(in oklab, var(--brand) 8%, var(--background));
   }
 }

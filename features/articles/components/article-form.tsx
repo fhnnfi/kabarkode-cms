@@ -657,7 +657,7 @@ function AuthorSelfBadge({ name }: { name?: string }) {
     <div className="space-y-1.5">
       <Label>Author</Label>
       <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
-        <span className="flex size-6 items-center justify-center rounded-full bg-black text-[9px] font-bold text-white">
+        <span className="flex size-6 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
           {(name ?? "?").slice(0, 2).toUpperCase()}
         </span>
         <span className="truncate font-medium">{name ?? "Diri sendiri"}</span>

@@ -24,7 +24,7 @@ export function MediaAvatar({
   return (
     <Avatar className={className}>
       {media && <AvatarImage src={media.public_url} alt={name ?? "Avatar"} />}
-      <AvatarFallback className={cn("bg-black text-white", fallbackClassName)}>
+      <AvatarFallback className={cn("bg-primary text-primary-foreground", fallbackClassName)}>
         {initials}
       </AvatarFallback>
     </Avatar>

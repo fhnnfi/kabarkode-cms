@@ -119,7 +119,7 @@ export default function ProfilePage() {
           {profile.data?.avatar_media_id && avatarMedia && (
             <AvatarImage src={avatarMedia.public_url} alt="Avatar" />
           )}
-          <AvatarFallback className="bg-black text-white">{initials}</AvatarFallback>
+          <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
         </Avatar>
         <div className="min-w-0">
           <p className="truncate text-sm font-bold">

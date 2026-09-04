@@ -25,6 +25,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { CommandPaletteProvider } from "@/components/command-palette-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/features/auth/auth-provider";
 
 // Redesign §14: header kontekstual — breadcrumb + shortcut ⌘K + user menu.
@@ -80,6 +81,7 @@ export function AppHeader() {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="flex items-center gap-3">
+        <ThemeToggle />
         <CommandPaletteProvider />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
