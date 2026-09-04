@@ -6,6 +6,7 @@ import { useDropzone } from "react-dropzone";
 import {
   Check,
   Copy,
+  Globe,
   LayoutGrid,
   List,
   Loader2,
@@ -68,6 +69,8 @@ export default function MediaPage() {
   const [deleting, setDeleting] = useState<Media | null>(null);
   const [preview, setPreview] = useState<Media | null>(null);
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [importUrl, setImportUrl] = useState("");
+  const [importing, setImporting] = useState(false);
   const [copied, setCopied] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -142,6 +145,31 @@ export default function MediaPage() {
     [uploadFiles],
   );
 
+  // Import gambar dari URL eksternal (Unsplash dkk.) — diunduh aman lewat
+  // route /api/image-import lalu di-upload ke MinIO via presigned flow normal,
+  // sehingga file tersimpan permanen (bukan hotlink).
+  async function importFromUrl() {
+    const url = importUrl.trim();
+    if (!url) return;
+    setImporting(true);
+    try {
+      const res = await fetch(`/api/image-import?url=${encodeURIComponent(url)}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Gagal mengambil gambar (${res.status})`);
+      }
+      const blob = await res.blob();
+      const name = decodeURIComponent(res.headers.get("x-image-name") ?? "imported.jpg");
+      const file = new File([blob], name, { type: blob.type });
+      await uploadFiles([file]);
+      setImportUrl("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal import gambar");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { "image/jpeg": [], "image/png": [], "image/webp": [], "image/avif": [] },
@@ -209,6 +237,30 @@ export default function MediaPage() {
           JPG · PNG · WEBP · AVIF — Maximum 10 MB per file
         </p>
       </div>
+
+      {/* Import dari URL eksternal (Unsplash, CDN publik, dsb.) */}
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void importFromUrl();
+        }}
+      >
+        <div className="relative max-w-md flex-1">
+          <Globe className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="url"
+            value={importUrl}
+            onChange={(e) => setImportUrl(e.target.value)}
+            placeholder="Atau tempel URL gambar — mis. https://images.unsplash.com/photo-…"
+            className="bg-card pl-8"
+            aria-label="URL gambar eksternal"
+          />
+        </div>
+        <Button type="submit" variant="outline" className="kk-transition bg-card" disabled={importing || !importUrl.trim()}>
+          {importing ? <Loader2 className="animate-spin" /> : <Globe />} Import
+        </Button>
+      </form>
 
       {/* Upload queue (§47) */}
       {queue.length > 0 && (

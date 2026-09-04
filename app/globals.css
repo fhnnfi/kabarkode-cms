@@ -10,6 +10,12 @@
     focus:outline-none prose-p:my-3;
   min-height: 400px;
 }
+/* Link dalam konten: biru, tanpa underline (redesign permintaan user). */
+.tiptap-content a,
+.article-content a {
+  @apply text-blue-600 no-underline hover:underline dark:text-blue-400;
+  font-weight: inherit;
+}
 .tiptap-content p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   @apply pointer-events-none float-left h-0 text-muted-foreground;

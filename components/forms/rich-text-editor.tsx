@@ -23,10 +23,15 @@ import {
   Redo2,
   Strikethrough,
   Undo2,
-  Unlink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -107,27 +112,99 @@ function ToolbarButton({
   );
 }
 
-function EditorToolbar({ editor }: { editor: Editor }) {
-  function setLink() {
-    const prev = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("URL tautan", prev ?? "https://");
-    if (url === null) return;
-    if (url === "") {
-      editor.chain().focus().unsetLink().run();
+/**
+ * Popover sisip/hapus hyperlink (pengganti window.prompt): pilih teks ->
+ * klik ikon link -> isi URL -> Enter/Apply. Validasi protokol di sini juga
+ * ditegakkan ulang di server (sanitize) dan saat render (DOMPurify).
+ */
+function LinkPopover({ editor }: { editor: Editor }) {
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const active = editor.isActive("link");
+
+  useEffect(() => {
+    if (open) setUrl((editor.getAttributes("link").href as string) ?? "https://");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  function apply() {
+    const value = url.trim();
+    if (!value || value === "https://") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      setOpen(false);
       return;
     }
     try {
-      // validasi dasar + tolak skrip URL (javascript:, data:) sebelum apply
-      const u = new URL(url);
+      const u = new URL(value);
       if (u.protocol !== "http:" && u.protocol !== "https:" && u.protocol !== "mailto:") {
         toast.error("Hanya URL http/https/mailto yang diizinkan");
         return;
       }
-      editor.chain().focus().extendMarkRange("link").setLink({ href: url, target: "_blank" }).run();
     } catch {
       toast.error("URL tidak valid");
+      return;
     }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: value, target: "_blank" }).run();
+    setOpen(false);
   }
+
+  function remove() {
+    editor.chain().focus().extendMarkRange("link").unsetLink().run();
+    setOpen(false);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Sisipkan tautan"
+          title="Sisipkan tautan"
+          className={cn("size-8", active && "bg-muted text-foreground")}
+          onMouseDown={(e) => e.preventDefault() /* jangan kehilangan seleksi editor */}
+        >
+          <Link2 />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 rounded-xl p-3">
+        <p className="mb-2 text-xs font-semibold">Sisipkan hyperlink</p>
+        <div className="flex gap-2">
+          <Input
+            autoFocus
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                apply();
+              }
+            }}
+            placeholder="https://example.com/artikel"
+            className="h-8 font-mono text-xs"
+            aria-label="URL tautan"
+          />
+          <Button type="button" size="sm" className="h-8 shrink-0" onClick={apply}>
+            Apply
+          </Button>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-[10px] text-muted-foreground">
+            {editor.state.selection.empty ? "Ketik URL untuk menyisipkan teks tautan baru" : "Terpasang pada teks terpilih"}
+          </p>
+          {active && (
+            <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-destructive" onClick={remove}>
+              Hapus tautan
+            </Button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function EditorToolbar({ editor }: { editor: Editor }) {
 
   return (
     <div className="kk-transition flex flex-wrap items-center gap-0.5 border-b bg-card p-1.5">
@@ -170,12 +247,7 @@ function EditorToolbar({ editor }: { editor: Editor }) {
         <span className="text-[10px] font-bold">{"</>"}</span>
       </ToolbarButton>
       <Separator orientation="vertical" className="mx-1 h-6" />
-      <ToolbarButton label="Sisipkan tautan" active={editor.isActive("link")} onClick={setLink}>
-        <Link2 />
-      </ToolbarButton>
-      <ToolbarButton label="Hapus tautan" onClick={() => editor.chain().focus().unsetLink().run()}>
-        <Unlink />
-      </ToolbarButton>
+      <LinkPopover editor={editor} />
       <Separator orientation="vertical" className="mx-1 h-6" />
       <ToolbarButton label="Undo" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}>
         <Undo2 />

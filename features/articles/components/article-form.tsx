@@ -35,6 +35,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authorsApi } from "@/lib/api/authors";
 import { STATUS_CONFIG, ARTICLE_TYPE_OPTIONS } from "@/features/articles/status-config";
 import { useAuth } from "@/features/auth/auth-provider";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { can } from "@/lib/auth/permissions";
 import { setUnsavedDirty } from "@/lib/unsaved-store";
 import { useIsMac } from "@/hooks/use-is-mac";
@@ -76,6 +77,10 @@ export function ArticleForm({ article }: ArticleFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const mac = useIsMac();
+  // Metadata dirender salah satu saja: sidebar (desktop) ATAU panel bawah
+  // (mobile). Dua instance register() field yang sama membuat react-hook-form
+  // me-reset input yang diketik user.
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const isEdit = Boolean(article);
 
@@ -404,8 +409,12 @@ export function ArticleForm({ article }: ArticleFormProps) {
           )}
         </div>
 
-        {/* Metadata sidebar compact + sticky (§69, §70) */}
-        <aside className="hidden w-full shrink-0 lg:block">
+        {/* Metadata sidebar compact + sticky (§69, §70).
+            Conditional render (bukan CSS hidden): dua instance register()
+            dengan nama field yang sama membuat react-hook-form me-reset
+            input yang diketik user. */}
+        {!isMobile && (
+        <aside className="w-full shrink-0">
           <div className="sticky top-28 space-y-6">
             <MetaSection title="Publishing">
               <div className="flex items-center justify-between">
@@ -480,23 +489,7 @@ export function ArticleForm({ article }: ArticleFormProps) {
             </MetaSection>
 
             <MetaSection title="Source">
-              <Input
-                placeholder="mis. The Verge"
-                aria-label="Source name"
-                className="h-8 text-sm"
-                {...form.register("source_name", { onChange: onDirty })}
-              />
-              <Input
-                type="url"
-                placeholder="https://example.com/article"
-                aria-label="Source URL"
-                className="h-8 font-mono text-xs"
-                aria-invalid={Boolean(form.formState.errors.source_url)}
-                {...form.register("source_url", { onChange: onDirty })}
-              />
-              {form.formState.errors.source_url && (
-                <p className="text-xs text-destructive">{form.formState.errors.source_url.message}</p>
-              )}
+              <SourceFields form={form} onDirty={onDirty} />
             </MetaSection>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-4 text-[11px] text-muted-foreground">
@@ -509,10 +502,12 @@ export function ArticleForm({ article }: ArticleFormProps) {
             </div>
           </div>
         </aside>
+        )}
       </div>
 
       {/* Metadata untuk layar kecil: di bawah konten, tetap satu kolom (§44). */}
-      <div className="grid gap-6 pb-8 lg:hidden">
+      {isMobile && (
+      <div className="grid gap-6 pb-8">
         <MetaSection title="Organization">
           <SegmentedControl<ArticleType>
             ariaLabel="Tipe artikel"
@@ -568,22 +563,10 @@ export function ArticleForm({ article }: ArticleFormProps) {
           </Button>
         </MetaSection>
         <MetaSection title="Source">
-          <Input
-            placeholder="mis. The Verge"
-            aria-label="Source name"
-            className="h-8 text-sm"
-            {...form.register("source_name", { onChange: onDirty })}
-          />
-          <Input
-            type="url"
-            placeholder="https://example.com/article"
-            aria-label="Source URL"
-            className="h-8 font-mono text-xs"
-            aria-invalid={Boolean(form.formState.errors.source_url)}
-            {...form.register("source_url", { onChange: onDirty })}
-          />
+          <SourceFields form={form} onDirty={onDirty} idPrefix="mobile" />
         </MetaSection>
       </div>
+      )}
 
       <MediaPicker
         open={coverOpen}
@@ -617,6 +600,54 @@ export function ArticleForm({ article }: ArticleFormProps) {
       </Dialog>
 
     </div>
+  );
+}
+
+/**
+ * Field sumber artikel. Dipakai di sidebar desktop DAN panel mobile —
+ * memakai id + htmlFor unik agar register() react-hook-form tidak bentrok
+ * (dulu keduanya memakai aria-label yang sama sehingga input yang terlihat
+ * tidak terikat ke form dan isinya hilang saat save).
+ */
+function SourceFields({
+  form,
+  onDirty,
+  idPrefix = "desktop",
+}: {
+  form: ReturnType<typeof useForm<ArticleFormValues>>;
+  onDirty: () => void;
+  idPrefix?: string;
+}) {
+  return (
+    <>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-source-name`} className="text-xs text-muted-foreground">
+          Source name
+        </Label>
+        <Input
+          id={`${idPrefix}-source-name`}
+          placeholder="mis. The Verge"
+          className="h-8 text-sm"
+          {...form.register("source_name", { onChange: onDirty })}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-source-url`} className="text-xs text-muted-foreground">
+          Source URL
+        </Label>
+        <Input
+          id={`${idPrefix}-source-url`}
+          type="url"
+          placeholder="https://example.com/article"
+          className="h-8 font-mono text-xs"
+          aria-invalid={Boolean(form.formState.errors.source_url)}
+          {...form.register("source_url", { onChange: onDirty })}
+        />
+        {form.formState.errors.source_url && (
+          <p className="text-xs text-destructive">{form.formState.errors.source_url.message}</p>
+        )}
+      </div>
+    </>
   );
 }
 
