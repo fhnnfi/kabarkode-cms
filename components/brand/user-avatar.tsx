@@ -32,8 +32,10 @@ export function MediaAvatar({
 }
 
 /**
- * Avatar user login: untuk role author memakai avatar profil author
- * tertaut (/authors/me -> avatar_media_id); staff memakai inisial email.
+ * Avatar user login — SEMUA role: bila akun tertaut ke profil author
+ * (/authors/me -> avatar_media_id; seed admin juga punya profil
+ * "Admin KabarKode"), tampilkan gambar avatar profil; jika tidak ada
+ * profil/terkait, fallback ke inisial email.
  */
 export function UserAvatar({
   className,
@@ -46,13 +48,14 @@ export function UserAvatar({
   const profile = useQuery({
     queryKey: ["authors", "me"],
     queryFn: authorsApi.me,
-    enabled: user?.role === "author",
     staleTime: 5 * 60_000,
+    // 404 (belum ada profil tertaut) bukan error fatal — cukup fallback.
+    retry: false,
   });
   return (
     <MediaAvatar
       mediaId={profile.data?.avatar_media_id}
-      name={profile.data?.name ?? user?.email}
+      name={profile.data?.name ?? user?.email?.split("@")[0] ?? "?"}
       className={className}
       fallbackClassName={fallbackClassName}
     />

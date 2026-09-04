@@ -47,12 +47,14 @@ export default function ProfilePage() {
   const qc = useQueryClient();
   const [avatarOpen, setAvatarOpen] = useState(false);
 
-  const isAuthorRole = user?.role === "author";
-
+  // Semua role yang punya profil author tertaut (termasuk admin seed
+  // "Admin KabarKode") bisa mengedit profil & avatar dari halaman ini.
   const profile = useQuery({
     queryKey: ["authors", "me"],
     queryFn: authorsApi.me,
-    enabled: isAuthorRole,
+    staleTime: 5 * 60_000,
+    // 404 (belum ada profil tertaut) bukan error fatal — cukup fallback.
+    retry: false,
   });
 
   const form = useForm<ProfileValues>({
@@ -130,15 +132,9 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {isAuthorRole ? (
-        profile.isLoading ? (
-          <Skeleton className="h-64 w-full rounded-2xl" />
-        ) : profile.isError || !profile.data ? (
-          <div className="rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">
-            Akun ini belum ditautkan ke profil author. Minta admin membuatkan
-            author dengan email akun ini di halaman Authors.
-          </div>
-        ) : (
+      {profile.isLoading ? (
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      ) : profile.data ? (
           <>
             {/* Edit profil */}
             <section className="space-y-4 rounded-2xl border bg-card p-5">
@@ -216,12 +212,12 @@ export default function ProfilePage() {
               }}
             />
           </>
-        )
       ) : (
-        <p className="text-sm text-muted-foreground">
-          Profil staff (admin/editor) dikelola lewat akun masing-masing — halaman
-          Authors menyediakan akun login untuk penulis.
-        </p>
+        <div className="rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">
+          Akun ini belum ditautkan ke profil author. Minta admin membuatkan
+          author dengan email akun ini di halaman Authors, atau tautkan lewat
+          edit author (user_id).
+        </div>
       )}
     </div>
   );
