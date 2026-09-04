@@ -15,14 +15,17 @@ import {
   Code,
   Heading2,
   Heading3,
+  Image as ImageIcon,
   Italic,
   Link2,
   List,
   ListOrdered,
+  Loader2,
   Quote,
   Redo2,
   Strikethrough,
   Undo2,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +37,8 @@ import {
 } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { mediaApi } from "@/lib/api/media";
+import { recordUploadedMedia } from "@/features/media/hooks";
 
 const lowlight = createLowlight(common);
 
@@ -205,6 +210,137 @@ function LinkPopover({ editor }: { editor: Editor }) {
   );
 }
 
+const IMG_ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+const IMG_MAX = 10 * 1024 * 1024;
+
+/**
+ * Popover sisip gambar ke dalam konten artikel:
+ * - Upload dari perangkat -> presigned flow MinIO (tersimpan permanen di CDN,
+ *   tercatat di Media Library) lalu src hasil register yang disisipkan;
+ * - atau tempel URL eksternal (http/https only).
+ */
+function ImagePopover({ editor }: { editor: Editor }) {
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const [alt, setAlt] = useState("");
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function insert(src: string, altText: string) {
+    // Setelah setImage, node gambar terpilih — sisip lagi akan MENGGANTINYA.
+    // Kollaps seleksi ke titik akhir dulu agar gambar baru ditambahkan, bukan
+    // menimpa gambar yang baru disisipkan.
+    const { to } = editor.state.selection;
+    editor.chain().focus().setTextSelection(to).setImage({ src, alt: altText || undefined }).run();
+    setOpen(false);
+    setUrl("");
+    setAlt("");
+  }
+
+  function applyUrl() {
+    const value = url.trim();
+    if (!value) return;
+    try {
+      const u = new URL(value);
+      if (u.protocol !== "http:" && u.protocol !== "https:") {
+        toast.error("Hanya URL http/https yang diizinkan");
+        return;
+      }
+    } catch {
+      toast.error("URL tidak valid");
+      return;
+    }
+    insert(value, alt.trim());
+  }
+
+  async function onFile(file: File | undefined) {
+    if (!file) return;
+    if (!IMG_ALLOWED.includes(file.type)) {
+      toast.error("Gunakan JPG/PNG/WebP/AVIF.");
+      return;
+    }
+    if (file.size > IMG_MAX) {
+      toast.error("Ukuran gambar melebihi 10 MB.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const media = await mediaApi.upload(file, "articles");
+      recordUploadedMedia(media);
+      insert(media.public_url, alt.trim() || media.file_name);
+      toast.success("Gambar diunggah & disisipkan");
+    } catch {
+      toast.error("Gagal mengunggah gambar");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Sisipkan gambar"
+          title="Sisipkan gambar"
+          className="size-8"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          <ImageIcon />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 rounded-xl p-3">
+        <p className="mb-2 text-xs font-semibold">Sisipkan gambar</p>
+        <div className="space-y-2">
+          <Input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://…/gambar.png (atau unggah)"
+            className="h-8 font-mono text-xs"
+            aria-label="URL gambar"
+          />
+          <Input
+            value={alt}
+            onChange={(e) => setAlt(e.target.value)}
+            placeholder="Teks alternatif (opsional)"
+            className="h-8 text-xs"
+            aria-label="Teks alternatif gambar"
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 shrink-0 gap-1.5"
+              onClick={() => fileRef.current?.click()}
+              disabled={busy}
+            >
+              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+              {busy ? "Mengunggah…" : "Upload"}
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept={IMG_ALLOWED.join(",")}
+              className="hidden"
+              onChange={(e) => void onFile(e.target.files?.[0])}
+            />
+            <Button type="button" size="sm" variant="outline" className="ml-auto h-8" onClick={applyUrl} disabled={!url.trim() || busy}>
+              Sisipkan URL
+            </Button>
+          </div>
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            Upload menyimpan gambar ke Media Library (MinIO/CDN) — URL eksternal
+            hanya disisipkan sebagai tautan gambar.
+          </p>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function EditorToolbar({ editor }: { editor: Editor }) {
 
   return (
@@ -247,6 +383,7 @@ function EditorToolbar({ editor }: { editor: Editor }) {
       <ToolbarButton label="Code block" active={editor.isActive("codeBlock")} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
         <span className="text-[10px] font-bold">{"</>"}</span>
       </ToolbarButton>
+      <ImagePopover editor={editor} />
       <Separator orientation="vertical" className="mx-1 h-6" />
       <LinkPopover editor={editor} />
       <Separator orientation="vertical" className="mx-1 h-6" />
