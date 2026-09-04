@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Archive, Eye, MoreHorizontal, Pencil, Send, Trash2 } from "lucide-react";
+import { Archive, CalendarClock, Eye, MoreHorizontal, Pencil, Send, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,10 +22,11 @@ import {
 } from "@/components/ui/dialog";
 import { useMedia } from "@/features/media/hooks";
 import { useArchiveArticle, useDeleteArticle, usePublishArticle } from "@/features/articles/hooks";
+import { ScheduleDialog } from "@/features/articles/components/schedule-dialog";
 import { STATUS_CONFIG } from "@/features/articles/status-config";
 import { useAuth } from "@/features/auth/auth-provider";
 import { can } from "@/lib/auth/permissions";
-import { formatRelative } from "@/lib/utils/format";
+import { formatDate, formatRelative } from "@/lib/utils/format";
 import { ARTICLE_TYPE_LABELS } from "@/features/articles/status-config";
 import type { Article } from "@/types/models";
 import { useState } from "react";
@@ -44,6 +45,7 @@ export function ArticleActions({ article }: { article: Article }) {
   const archive = useArchiveArticle();
   const del = useDeleteArticle();
   const [pending, setPending] = useState<PendingAction>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const busy = publish.isPending || archive.isPending || del.isPending;
 
   const labels: Record<string, { title: string; desc: string; cta: string }> = {
@@ -104,6 +106,14 @@ export function ArticleActions({ article }: { article: Article }) {
               <Send /> Publikasikan
             </DropdownMenuItem>
           )}
+          {can(user?.role, "publish_articles") && article.status === "draft" && (
+            <DropdownMenuItem onSelect={() => setScheduleOpen(true)}>
+              <CalendarClock />
+              {article.scheduled_at
+                ? `Terjadwal: ${formatDate(article.scheduled_at, "d MMM, HH:mm")}`
+                : "Jadwalkan publikasi…"}
+            </DropdownMenuItem>
+          )}
           {can(user?.role, "archive_articles") && article.status !== "archived" && (
             <DropdownMenuItem onSelect={() => setPending({ kind: "archive", article })}>
               <Archive /> Arsipkan
@@ -129,6 +139,13 @@ export function ArticleActions({ article }: { article: Article }) {
             <DialogTitle>{cfg?.title}</DialogTitle>
             <DialogDescription>{cfg?.desc}</DialogDescription>
           </DialogHeader>
+          {pending?.kind === "publish" && pending.article.scheduled_at && (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+              Artikel ini terjadwal publik otomatis pada{" "}
+              {formatDate(pending.article.scheduled_at)} — mempublikasikan sekarang
+              membatalkan jadwal tersebut.
+            </p>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPending(null)} disabled={busy}>
               Batal
@@ -143,6 +160,10 @@ export function ArticleActions({ article }: { article: Article }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {scheduleOpen && (
+        <ScheduleDialog open={scheduleOpen} onOpenChange={setScheduleOpen} article={article} />
+      )}
     </>
   );
 }
@@ -198,6 +219,16 @@ export function ArticleList({ articles }: { articles: Article[] }) {
           >
             {STATUS_CONFIG[a.status].label}
           </Badge>
+          {a.status === "draft" && a.scheduled_at && (
+            <Badge
+              variant="outline"
+              title={`Publikasi otomatis ${formatDate(a.scheduled_at)}`}
+              className="kk-transition hidden shrink-0 gap-1 border-sky-500/50 text-sky-600 dark:text-sky-400 lg:inline-flex"
+            >
+              <CalendarClock className="size-3" />
+              {formatDate(a.scheduled_at, "d MMM, HH:mm")}
+            </Badge>
+          )}
           {can(user?.role, "publish_articles") && a.status === "draft" && (
             <QuickPublish article={a} />
           )}

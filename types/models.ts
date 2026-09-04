@@ -35,6 +35,8 @@ export interface Article {
   source_name: string | null;
   source_url: string | null;
   published_at: string | null;
+  /** Jadwal publikasi otomatis (draft saja; null = tanpa jadwal). */
+  scheduled_at: string | null;
   created_at: string;
   updated_at: string;
   author: RefSummary | null;

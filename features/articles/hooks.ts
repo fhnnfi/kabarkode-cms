@@ -109,6 +109,27 @@ export function usePublishArticle() {
   });
 }
 
+/**
+ * Jadwalkan publikasi otomatis (scheduled_at ISO; null = batalkan jadwal).
+ * Backend mem-publish sendiri saat jatuh tempo — tidak perlu browser tetap terbuka.
+ */
+export function useScheduleArticle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, scheduledAt }: { id: string; scheduledAt: string | null }) =>
+      articlesApi.schedule(id, scheduledAt),
+    onSuccess: (article) => {
+      invalidateAfterChange(qc, article.id);
+      toast.success(
+        article.scheduled_at
+          ? `Publikasi terjadwal: ${new Date(article.scheduled_at).toLocaleString("id-ID")}`
+          : "Jadwal publikasi dibatalkan",
+      );
+    },
+    onError: fail("menjadwalkan publikasi"),
+  });
+}
+
 export function useArchiveArticle() {
   const qc = useQueryClient();
   return useMutation({

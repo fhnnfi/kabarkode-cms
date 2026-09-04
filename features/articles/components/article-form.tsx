@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Archive, ArrowLeft, Check, Eye, Loader2, Pencil, Send } from "lucide-react";
+import { Archive, ArrowLeft, CalendarClock, Check, Eye, Loader2, Pencil, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import { MediaPicker } from "@/components/media/media-picker";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { CategoryPicker } from "@/features/articles/components/category-picker";
 import { AuthorPicker } from "@/features/articles/components/author-picker";
+import { ScheduleDialog } from "@/features/articles/components/schedule-dialog";
 import { TagChips } from "@/features/articles/components/tag-chips";
 import { CoverDropzone } from "@/features/articles/components/cover-dropzone";
 import { articleFormSchema, type ArticleFormValues } from "@/lib/validation/schemas";
@@ -34,6 +35,7 @@ import { useCreateArticle, useUpdateArticle, usePublishArticle, useArchiveArticl
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authorsApi } from "@/lib/api/authors";
 import { STATUS_CONFIG, ARTICLE_TYPE_OPTIONS } from "@/features/articles/status-config";
+import { formatDate } from "@/lib/utils/format";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { can } from "@/lib/auth/permissions";
@@ -75,6 +77,7 @@ type SaveState = "saved" | "unsaved" | "saving";
  */
 export function ArticleForm({ article }: ArticleFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const mac = useIsMac();
   // Metadata dirender salah satu saja: sidebar (desktop) ATAU panel bawah
@@ -211,6 +214,11 @@ export function ArticleForm({ article }: ArticleFormProps) {
   }
 
   const [publishConfirm, setPublishConfirm] = useState(false);
+  // Jadwal terkini dari server (bisa berubah setelah save/schedule).
+  const scheduledAt = article?.scheduled_at ?? null;
+  // Dialog jadwal dikendalikan URL (?schedule=1) — satu mekanisme untuk mode
+  // create (setelah save draft) maupun edit, tanpa setState di dalam effect.
+  const scheduleOpen = searchParams.get("schedule") === "1";
 
   async function onPublishConfirmed() {
     let result = await save();
@@ -226,6 +234,28 @@ export function ArticleForm({ article }: ArticleFormProps) {
   async function onArchive() {
     if (!article) return;
     archiveArticle.mutate(article.id, { onSuccess: () => router.push("/articles") });
+  }
+
+  /**
+   * Buka dialog jadwal. Di mode create, simpan dulu sebagai draft agar
+   * punya id server untuk endpoint /schedule; dialog tetap terbuka setelah
+   * replace() me-remount halaman (flag ?schedule=1 di URL).
+   */
+  async function onOpenSchedule() {
+    if (!isEdit) {
+      const result = await save("draft");
+      if (!result) return;
+      queryClient.setQueryData(articleKeys.detail(result.id), result);
+      router.replace(`/articles/${result.id}/edit?schedule=1`);
+      return;
+    }
+    router.replace(`/articles/${article!.id}/edit?schedule=1`, { scroll: false });
+  }
+
+  function onScheduleDialogChange(open: boolean) {
+    if (open) return;
+    const base = isEdit ? `/articles/${article!.id}/edit` : "/articles/new";
+    router.replace(base, { scroll: false });
   }
 
   // Keyboard shortcuts global editor (§42): Ctrl/Cmd+S simpan, Ctrl/Cmd+Enter publish.
@@ -282,6 +312,17 @@ export function ArticleForm({ article }: ArticleFormProps) {
             {busy ? <Loader2 className="animate-spin" /> : null}
             Save Draft
           </Button>
+          {can(user?.role, "publish_articles") && currentStatus !== "published" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("kk-transition", scheduledAt && "border-sky-500/50 text-sky-600 dark:text-sky-400")}
+              onClick={onOpenSchedule}
+              disabled={busy}
+            >
+              <CalendarClock /> {scheduledAt ? "Terjadwal" : "Schedule"}
+            </Button>
+          )}
           {can(user?.role, "publish_articles") && currentStatus !== "published" && (
             <Button size="sm" onClick={() => setPublishConfirm(true)} disabled={busy}>
               <Send /> Publish
@@ -426,8 +467,17 @@ export function ArticleForm({ article }: ArticleFormProps) {
                   {STATUS_CONFIG[currentStatus].label}
                 </Badge>
               </div>
+              {scheduledAt && currentStatus !== "published" && (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-2.5 py-2">
+                  <span className="flex items-center gap-1.5 text-xs text-sky-700 dark:text-sky-400">
+                    <CalendarClock className="size-3.5 shrink-0" />
+                    Publik otomatis {formatDate(scheduledAt, "d MMM yyyy, HH:mm")}
+                  </span>
+                </div>
+              )}
               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Status berubah lewat aksi: <span className="font-mono">Publish</span> atau{" "}
+                Status berubah lewat aksi: <span className="font-mono">Publish</span>,{" "}
+                <span className="font-mono">Schedule</span>, atau{" "}
                 <span className="font-mono">Arsipkan</span> di atas.
               </p>
             </MetaSection>
@@ -588,6 +638,12 @@ export function ArticleForm({ article }: ArticleFormProps) {
               Artikel akan tersedia untuk publik di website KabarKode.
             </DialogDescription>
           </DialogHeader>
+          {scheduledAt && (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+              Artikel terjadwal publik otomatis pada {formatDate(scheduledAt)} — mempublikasikan
+              sekarang membatalkan jadwal tersebut.
+            </p>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPublishConfirm(false)}>
               Batal
@@ -598,6 +654,11 @@ export function ArticleForm({ article }: ArticleFormProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Jadwal publikasi otomatis (scheduled publish) — state dialog dari URL. */}
+      {article && scheduleOpen && (
+        <ScheduleDialog open={scheduleOpen} onOpenChange={onScheduleDialogChange} article={article} />
+      )}
 
     </div>
   );

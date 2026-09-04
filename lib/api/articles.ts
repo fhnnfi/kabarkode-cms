@@ -46,6 +46,15 @@ export const articlesApi = {
     return apiRequest<Article>({ method: "POST", url: `/articles/${id}/publish` }).then((r) => r.data);
   },
 
+  /** Jadwalkan publikasi otomatis; scheduled_at null = batalkan jadwal. */
+  schedule(id: string, scheduledAt: string | null): Promise<Article> {
+    return apiRequest<Article>({
+      method: "POST",
+      url: `/articles/${id}/schedule`,
+      data: { scheduled_at: scheduledAt },
+    }).then((r) => r.data);
+  },
+
   archive(id: string): Promise<Article> {
     return apiRequest<Article>({ method: "POST", url: `/articles/${id}/archive` }).then((r) => r.data);
   },
