@@ -73,7 +73,7 @@ Backend hanya mendukung **Bearer JWT** (belum cookie-based). Sesuai requirement 
 ## UX Highlights (hasil redesign)
 
 - **Command palette** global `Ctrl/Cmd+K`: Create / Navigate / pencarian artikel server-side.
-- **Shortcut**: `Ctrl/Cmd+1` Dashboard, `+2` Articles, `+3` Media, `+Shift+A` New Article, `+S` Save draft, `+Enter` Publish — badge shortcut tampil di dalam palette.
+- **Shortcut**: `Alt+1` Dashboard, `Alt+2` Articles, `Alt+3` Media, `Alt+N` New Article, `Ctrl/Cmd+K` palette, `Ctrl/Cmd+S` Save draft, `Ctrl/Cmd+Enter` Publish — badge shortcut tampil di dalam palette dan menyesuaikan platform (⌘/⌥ di Mac, Ctrl/Alt di Windows/Linux). Navigasi sengaja memakai `Alt`, bukan `Ctrl+angka`, karena `Ctrl+1..9` dan `Ctrl+Shift+A` adalah shortcut bawaan Chrome/Edge yang tidak bisa di-intercept web app.
 - **Article editor** ala ruang menulis: judul 48px auto-grow, excerpt sekunder, slug inline (`kabarkode.dev/… [Edit]`), save state terlihat (Saved/Saving…/Unsaved), metadata compact di sidebar sticky, status via aksi eksplisit Publish/Archive.
 - **Filter artikel** persist di URL (`/articles?status=draft&category=security&tag=react`) + tabs status + popover Filters.
 - **Upload dropzone** (drag & drop + klik + progress + preview + replace/remove) untuk cover artikel & Media Library; multi-file upload berurutan lewat presigned flow.

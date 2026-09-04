@@ -13,7 +13,8 @@ import {
   UserPen,
 } from "lucide-react";
 import { Kbd } from "@/components/ui/kbd";
-import { NAV_SHORTCUTS } from "@/lib/nav-shortcuts";
+import { NAV_SHORTCUTS, shortcutLabel } from "@/lib/nav-shortcuts";
+import { useIsMac } from "@/hooks/use-is-mac";
 import {
   Command,
   CommandEmpty,
@@ -41,9 +42,10 @@ interface CommandPaletteProps {
 
 /** Badge shortcut keyboard di sisi kanan item palette (UX: shortcut terlihat). */
 function ShortcutHint({ href }: { href: string }) {
+  const mac = useIsMac();
   const sc = NAV_SHORTCUTS.find((s) => s.href === href);
   if (!sc) return null;
-  return <Kbd className="ml-auto">{sc.combo}</Kbd>;
+  return <Kbd className="ml-auto">{shortcutLabel(sc.keys, mac)}</Kbd>;
 }
 
 /**

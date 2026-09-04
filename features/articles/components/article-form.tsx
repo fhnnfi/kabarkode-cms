@@ -37,6 +37,7 @@ import { STATUS_CONFIG, ARTICLE_TYPE_OPTIONS } from "@/features/articles/status-
 import { useAuth } from "@/features/auth/auth-provider";
 import { can } from "@/lib/auth/permissions";
 import { setUnsavedDirty } from "@/lib/unsaved-store";
+import { useIsMac } from "@/hooks/use-is-mac";
 import { cn } from "@/lib/utils";
 import type { Article, ArticleStatus, ArticleType } from "@/types/models";
 
@@ -74,6 +75,7 @@ type SaveState = "saved" | "unsaved" | "saving";
 export function ArticleForm({ article }: ArticleFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const mac = useIsMac();
   const { user } = useAuth();
   const isEdit = Boolean(article);
 
@@ -499,10 +501,10 @@ export function ArticleForm({ article }: ArticleFormProps) {
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-4 text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Kbd>⌘S</Kbd> simpan
+                <Kbd>{mac ? "\u2318S" : "Ctrl+S"}</Kbd> simpan
               </span>
               <span className="flex items-center gap-1">
-                <Kbd>⌘↵</Kbd> publish
+                <Kbd>{mac ? "\u2318\u21B5" : "Ctrl+Enter"}</Kbd> publish
               </span>
             </div>
           </div>

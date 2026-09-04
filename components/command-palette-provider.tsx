@@ -6,13 +6,15 @@ import { Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { CommandPalette } from "@/components/command-palette";
-
-import { NAV_SHORTCUTS } from "@/lib/nav-shortcuts";
+import { NAV_SHORTCUTS, paletteLabel } from "@/lib/nav-shortcuts";
+import { useIsMac } from "@/hooks/use-is-mac";
 import { isUnsavedDirty } from "@/lib/unsaved-store";
 
 /**
  * Global command palette launcher (redesign §15, §42):
- * Ctrl/Cmd+K membuka palette; Ctrl/Cmd+1/2/3 & Ctrl/Cmd+Shift+A navigasi.
+ * Ctrl/Cmd+K membuka palette; Alt+1/2/3/Alt+N navigasi antar tab.
+ * (Alt, bukan Ctrl+angka — Ctrl+1..9 & Ctrl+Shift+A reserved oleh
+ * Chrome/Edge di Windows dan tidak bisa di-intercept web app.)
  */
 export function CommandPaletteProvider() {
   const [open, setOpen] = useState(false);
@@ -21,22 +23,20 @@ export function CommandPaletteProvider() {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
-      const k = e.key.toLowerCase();
-      if (k === "k") {
+      // Palette: Ctrl/Cmd+K (browser tidak merreserve kombinasi ini).
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen((v) => !v);
         return;
       }
-      // Shift+A = New Article; angka = tab utama.
-      const target = NAV_SHORTCUTS.find(
-        (s) =>
-          (s.keys === "A" && e.shiftKey && k === "a") ||
-          (s.keys !== "A" && !e.shiftKey && k === s.keys),
-      );
-      if (target && !pathname?.startsWith("/login")) {
-        e.preventDefault();
-        if (!isUnsavedDirty()) router.push(target.href);
+      // Navigasi: Alt+angka / Alt+N (aman di Windows & Mac).
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        const k = e.key.toUpperCase();
+        const target = NAV_SHORTCUTS.find((s) => s.keys === k);
+        if (target && !pathname?.startsWith("/login")) {
+          e.preventDefault();
+          if (!isUnsavedDirty()) router.push(target.href);
+        }
       }
     }
     window.addEventListener("keydown", onKey);
@@ -54,6 +54,7 @@ export function CommandPaletteProvider() {
 // Trigger hanya tampil di halaman dashboard (header); login tidak punya pathname match.
 function PaletteTrigger({ onOpen }: { onOpen: () => void }) {
   const pathname = usePathname();
+  const mac = useIsMac();
   if (pathname?.startsWith("/login")) return null;
   return (
     <Button
@@ -65,7 +66,7 @@ function PaletteTrigger({ onOpen }: { onOpen: () => void }) {
     >
       <Command className="size-3.5" />
       <span className="hidden text-xs sm:inline">Cari atau lakukan…</span>
-      <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
+      <Kbd className="hidden sm:inline-flex">{paletteLabel(mac)}</Kbd>
     </Button>
   );
 }
