@@ -8,8 +8,7 @@ export function sanitizeHtml(html: string): string {
   if (typeof window === "undefined") return html;
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
-    ADD_TAGS: ["iframe"],
     ADD_ATTR: ["target", "rel", "class"],
-    FORBID_TAGS: ["style", "form", "input", "script"],
+    FORBID_TAGS: ["style", "form", "input", "script", "iframe", "object", "embed"],
   });
 }

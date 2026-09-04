@@ -117,8 +117,12 @@ function EditorToolbar({ editor }: { editor: Editor }) {
       return;
     }
     try {
-      // validasi dasar sebelum apply
-      new URL(url);
+      // validasi dasar + tolak skrip URL (javascript:, data:) sebelum apply
+      const u = new URL(url);
+      if (u.protocol !== "http:" && u.protocol !== "https:" && u.protocol !== "mailto:") {
+        toast.error("Hanya URL http/https/mailto yang diizinkan");
+        return;
+      }
       editor.chain().focus().extendMarkRange("link").setLink({ href: url, target: "_blank" }).run();
     } catch {
       toast.error("URL tidak valid");
